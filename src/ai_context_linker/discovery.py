@@ -14,6 +14,7 @@ from typing import Iterable
 
 from .adapters import is_link_or_reparse
 from .core import ManifestError, _atomic_write_text
+from .relationships import DEPENDENCY_METADATA_FILENAMES
 from .scanner import DEFAULT_ALLOW_FILES, SYNC_DIRECTORY_MARKERS
 
 
@@ -127,6 +128,11 @@ def discover_projects(roots: Iterable[Path | str]) -> list[dict[str, object]]:
                 "id": _unique_id(root.name, used_ids),
                 "path": str(root),
                 "allow_files": allow_files,
+                "dependency_files": [
+                    name
+                    for name in DEPENDENCY_METADATA_FILENAMES
+                    if (root / name).is_file() and not is_link_or_reparse(root / name)
+                ],
                 "observe_paths": [],
             }
         )

@@ -24,6 +24,13 @@ from .core import (
     validate_manifest,
     validate_publish_text,
 )
+from .relationships import (
+    DEPENDENCY_METADATA_FILENAMES,
+    derive_dependency_relationships,
+    derive_document_relationships,
+    parse_dependency_metadata,
+    repeated_reference_fragments,
+)
 
 
 CONFIG_KEYS = {"schema_version", "workspace", "projects", "relationships"}
@@ -34,6 +41,7 @@ CONFIG_PROJECT_KEYS = {
     "summary",
     "status",
     "allow_files",
+    "dependency_files",
     "observe_paths",
     "risks",
     "open_questions",
@@ -132,6 +140,14 @@ def _observable_path(raw: str, label: str) -> Path:
     )
     if sensitive_name or candidate.suffix.lower() in FORBIDDEN_OBSERVED_SUFFIXES:
         raise ManifestError(f"{label} names a sensitive path that must not enter the publish surface")
+    return candidate
+
+
+def _dependency_path(raw: str, label: str) -> Path:
+    candidate = _safe_relative_path(raw, label)
+    if candidate.parent != Path(".") or candidate.name not in DEPENDENCY_METADATA_FILENAMES:
+        allowed = ", ".join(DEPENDENCY_METADATA_FILENAMES)
+        raise ManifestError(f"{label} must be a root dependency metadata file chosen from: {allowed}")
     return candidate
 
 
@@ -330,6 +346,7 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
 
     projects: list[dict[str, Any]] = []
     report_projects: list[dict[str, Any]] = []
+    relationship_inputs: dict[str, dict[str, Any]] = {}
     for index, raw_project in enumerate(_list(config.get("projects"), "projects")):
         project = _mapping(raw_project, f"projects[{index}]")
         _keys(project, CONFIG_PROJECT_KEYS, f"projects[{index}]")
@@ -344,12 +361,17 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
             raise ManifestError(f"projects[{index}].path is not an existing directory")
 
         allow_files = _strings(project.get("allow_files", list(DEFAULT_ALLOW_FILES)), f"projects[{index}].allow_files")
+        dependency_files = _strings(project.get("dependency_files", []), f"projects[{index}].dependency_files")
         observed_paths = _strings(project.get("observe_paths", []), f"projects[{index}].observe_paths")
         documents: dict[str, str] = {}
         evidence: list[str] = []
         signals: list[str] = []
         metadata_warnings: list[str] = []
         observed_present: list[str] = []
+        dependency_identities: set[str] = set()
+        dependencies: set[str] = set()
+        dependency_sources: dict[str, set[str]] = {}
+        dependency_files_read: list[str] = []
         for item_index, raw_relative in enumerate(allow_files):
             relative = _metadata_path(raw_relative, f"projects[{index}].allow_files[{item_index}]")
             unresolved = root / relative
@@ -360,6 +382,27 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
                 documents[relative.as_posix()] = _read_metadata(target, f"projects[{index}].allow_files[{item_index}]")
                 signals.append(f"The allowlisted metadata file `{relative.as_posix()}` is present.")
                 evidence.append(f"{project_id}:file:{relative.as_posix()}")
+
+        for item_index, raw_relative in enumerate(dependency_files):
+            relative = _dependency_path(raw_relative, f"projects[{index}].dependency_files[{item_index}]")
+            unresolved = root / relative
+            if is_link_or_reparse(unresolved):
+                raise ManifestError(f"projects[{index}].dependency_files[{item_index}] must not be a link")
+            target = _resolve_inside(root, relative, f"projects[{index}].dependency_files[{item_index}]")
+            if not target.is_file():
+                continue
+            try:
+                identities, declared = parse_dependency_metadata(target)
+            except (OSError, UnicodeError, ValueError):
+                metadata_warnings.append(
+                    f"Dependency metadata `{relative.as_posix()}` could not be parsed; no relationship facts were derived from it."
+                )
+                continue
+            dependency_files_read.append(relative.as_posix())
+            dependency_identities.update(identities)
+            dependencies.update(declared)
+            for dependency in declared:
+                dependency_sources.setdefault(dependency, set()).add(relative.as_posix())
 
         for item_index, raw_relative in enumerate(observed_paths):
             relative = _observable_path(raw_relative, f"projects[{index}].observe_paths[{item_index}]")
@@ -442,15 +485,46 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
                 "git": git_report,
                 "filename_inventory": inventory_report,
                 "metadata_open_item_count": open_items_added,
+                "dependency_metadata_files_read": sorted(dependency_files_read),
                 "source_code_bodies_read": 0,
             }
         )
+        relationship_inputs[project_id] = {
+            "documents": documents,
+            "identities": dependency_identities,
+            "dependencies": dependencies,
+            "dependency_sources": dependency_sources,
+        }
 
     relationships: list[dict[str, str]] = []
     for index, raw_relationship in enumerate(_list(config.get("relationships", []), "relationships")):
         relationship = _mapping(raw_relationship, f"relationships[{index}]")
         _keys(relationship, RELATIONSHIP_KEYS, f"relationships[{index}]")
         relationships.append({key: str(_string(relationship.get(key), f"relationships[{index}].{key}")) for key in RELATIONSHIP_KEYS})
+
+    configured_relationship_count = len(relationships)
+    derived_dependencies = derive_dependency_relationships(relationship_inputs)
+    project_ids = set(relationship_inputs)
+    repeated_fragments = repeated_reference_fragments(
+        {project_id: inputs["documents"] for project_id, inputs in relationship_inputs.items()},
+        project_ids=project_ids,
+    )
+    derived_documents = [
+        relationship
+        for source_id, inputs in sorted(relationship_inputs.items())
+        for relationship in derive_document_relationships(
+            source_id,
+            inputs["documents"],
+            project_ids,
+            ignored_fragments=repeated_fragments,
+        )
+    ]
+    seen_relationships = {(item["source"], item["target"], item["type"]) for item in relationships}
+    for relationship in [*derived_dependencies, *derived_documents]:
+        key = (relationship["source"], relationship["target"], relationship["type"])
+        if key not in seen_relationships:
+            relationships.append(relationship)
+            seen_relationships.add(key)
 
     timestamp = observed_at or datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
     candidate: dict[str, Any] = {
@@ -471,6 +545,12 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         "requires_human_approval": True,
         "untrusted_metadata_requires_review": True,
         "source_code_bodies_read": 0,
+        "relationships": {
+            "configured": configured_relationship_count,
+            "declared_dependency": len(derived_dependencies),
+            "document_reference": len(derived_documents),
+            "repeated_reference_fragments_ignored": len(repeated_fragments),
+        },
         "projects": sorted(report_projects, key=lambda item: item["id"]),
     }
     return candidate, report

@@ -10,6 +10,8 @@
 - Add coarse Git change categories and 30-day activity facts without publishing changed filenames.
 - Apply link and Windows reparse-point protection to manually configured project roots and Git metadata.
 - Extract at most five open checklist items from approved metadata with relative line evidence; source TODO comments remain unread.
+- Derive graded declared-dependency and document-reference edges from reviewed structured metadata.
+- Suppress generic project IDs, ambiguous package identities, ordinary prose matches, and repeated template references.
 
 ## 0.2.0 - 2026-08-12
 

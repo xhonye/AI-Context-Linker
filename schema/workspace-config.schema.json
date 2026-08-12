@@ -23,6 +23,10 @@
         "summary": {"$ref": "context-manifest.schema.json#/$defs/safeString"},
         "status": {"$ref": "context-manifest.schema.json#/$defs/safeString"},
         "allow_files": {"type": "array", "items": {"$ref": "#/$defs/relativePath"}},
+        "dependency_files": {
+          "type": "array",
+          "items": {"enum": ["pyproject.toml", "package.json", "Cargo.toml", "go.mod"]}
+        },
         "observe_paths": {"type": "array", "items": {"$ref": "#/$defs/relativePath"}},
         "risks": {"$ref": "context-manifest.schema.json#/$defs/safeStringArray"},
         "open_questions": {"$ref": "context-manifest.schema.json#/$defs/safeStringArray"}

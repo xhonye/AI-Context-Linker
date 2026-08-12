@@ -244,6 +244,77 @@ def test_scan_then_build_is_a_two_step_approval_flow(tmp_path: Path) -> None:
     assert str(project) not in scan_paths.candidate_manifest.read_text(encoding="utf-8")
 
 
+def test_scanner_derives_graded_relationships_without_publishing_dependency_contents(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    source.mkdir()
+    target.mkdir()
+    (source / "README.md").write_text(
+        "# Source\n\nSafe source.\n\nUses `target-project` for one documented workflow.\n",
+        encoding="utf-8",
+    )
+    (target / "README.md").write_text("# Target\n\nSafe target.\n", encoding="utf-8")
+    (source / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "source-project",
+                "scripts": {"private": "run C:/Users/example/private.js"},
+                "dependencies": {"target-project": "workspace:*"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (target / "package.json").write_text(json.dumps({"name": "target-project"}), encoding="utf-8")
+    config = {
+        "schema_version": "0.2",
+        "workspace": {
+            "name": "Relationships",
+            "summary": "Synthetic relationship test.",
+            "current_focus": "Verify graded evidence.",
+            "decisions": [],
+            "unknowns": [],
+        },
+        "projects": [
+            {
+                "id": "source-project",
+                "path": str(source),
+                "allow_files": ["README.md"],
+                "dependency_files": ["package.json"],
+            },
+            {
+                "id": "target-project",
+                "path": str(target),
+                "allow_files": ["README.md"],
+                "dependency_files": ["package.json"],
+            },
+        ],
+        "relationships": [],
+    }
+    config_path = tmp_path / "relationships.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+
+    candidate, report = collect_candidate(config_path)
+    rendered = json.dumps(candidate)
+
+    assert {(item["type"], item["target"]) for item in candidate["relationships"]} == {
+        ("declared-dependency", "target-project"),
+        ("document-reference", "target-project"),
+    }
+    assert "C:/Users" not in rendered
+    assert report["relationships"]["declared_dependency"] == 1
+    assert report["relationships"]["document_reference"] == 1
+    assert report["source_code_bodies_read"] == 0
+
+
+def test_scanner_rejects_nested_dependency_metadata_path(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    config = write_config(tmp_path, project, dependency_files=["nested/package.json"])
+
+    with pytest.raises(ManifestError, match="root dependency metadata"):
+        collect_candidate(config)
+
+
 def test_scan_report_compares_with_previous_approved_manifest(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()

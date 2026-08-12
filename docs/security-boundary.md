@@ -47,3 +47,4 @@ ChatGPT 的 Google Drive 集成会访问或索引用户授权范围内的内容�
 - 文件名清单适配器有目录剪枝、深度与条目上限；只发布固定入口文件名、测试数量和是否截断，不发布任意文件名。Git 变更只发布粗粒度分类数量，不发布具体路径。
 - 手工 workspace 配置不能绕过目录边界：项目根与 `.git` 的 symlink 或 Windows reparse point 会被拒绝或跳过。
 - 开放事项只来自已批准的根目录 README、AGENTS、CLAUDE、ROADMAP、TODO、STATUS、CHANGELOG 或 PROJECT_CHARTER 中的 Markdown 未完成复选项，最多 5 条并经过发布安全校验；源码 TODO、内部 `task_plan.md`/`progress.md`、任意任务数据库和私人运行记录不属于默认采集面。
+- 依赖关系只解析经审阅的固定根目录依赖清单，且只在目标包身份唯一时成立；文档引用只认 Markdown 代码标记或链接，并过滤普通正文和重复模板。二者都不读取或发布源码正文，文档引用不会升级成依赖证明。

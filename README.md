@@ -61,6 +61,8 @@ ChatGPT 能正确承认自己无法读取本地磁盘，但也因此不知道今
 - 以限深、限量、只看文件名的方式识别常规入口和测试文件，不读取其内容或声称测试已通过。
 - 将 Git 未提交路径归类为 source、tests、docs、config、other，只发布数量而不发布文件名。
 - 从已批准的 README/AGENTS 元数据提取最多 5 条未完成复选项并保留相对行号证据；不扫描源码 TODO 注释。
+- 从经审阅的 pyproject/package.json/Cargo/go.mod 声明生成依赖边，并把 Markdown 代码标记或链接中的项目提及降级标为“文档引用”。
+- 自动忽略通用目录名、身份不唯一的包、普通正文名称命中和跨项目重复模板引用。
 - 先生成 `candidate-manifest.json` 和 `scan-report.json`，再由人审阅发布。
 - 从严格白名单 JSON manifest 生成稳定的 `ai_context_linker.md`。
 - 同时生成派生关系图 `ai_context_linker.graph.json`。
