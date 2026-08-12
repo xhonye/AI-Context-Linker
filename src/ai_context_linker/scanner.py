@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .adapters import classify_changed_path, collect_filename_inventory, is_link_or_reparse
 from .core import (
     ManifestError,
     _atomic_write_text,
@@ -39,7 +40,16 @@ CONFIG_PROJECT_KEYS = {
 }
 WORKSPACE_KEYS = {"name", "summary", "current_focus", "decisions", "unknowns"}
 RELATIONSHIP_KEYS = {"source", "target", "type", "summary", "evidence"}
-DEFAULT_ALLOW_FILES = ("README.md", "AGENTS.md")
+DEFAULT_ALLOW_FILES = (
+    "README.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "ROADMAP.md",
+    "TODO.md",
+    "STATUS.md",
+    "CHANGELOG.md",
+    "PROJECT_CHARTER.md",
+)
 ALLOWED_METADATA_NAMES = {
     "README.md",
     "AGENTS.md",
@@ -48,8 +58,12 @@ ALLOWED_METADATA_NAMES = {
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
+    "ROADMAP.md",
+    "TODO.md",
+    "STATUS.md",
 }
 MAX_METADATA_BYTES = 64 * 1024
+MAX_METADATA_OPEN_ITEMS = 5
 FORBIDDEN_OBSERVED_PARTS = {".git", ".ssh"}
 FORBIDDEN_OBSERVED_MARKERS = {"credential", "secret", "token"}
 FORBIDDEN_OBSERVED_SUFFIXES = {".db", ".key", ".p12", ".pem", ".sqlite", ".sqlite3"}
@@ -159,6 +173,8 @@ def _markdown_summary(text: str) -> str | None:
             if paragraph:
                 break
             continue
+        if re.fullmatch(r"[-*_]{3,}", line):
+            continue
         if line.startswith(("#", "!", "<", ">", "- ", "* ", "+ ")) or re.match(r"^\d+\.\s", line):
             continue
         if line.startswith("[") and "](" in line:
@@ -169,6 +185,29 @@ def _markdown_summary(text: str) -> str | None:
         if line:
             paragraph.append(line)
     return " ".join(paragraph)[:1000] or None
+
+
+def _markdown_open_items(text: str) -> list[tuple[str, int]]:
+    items: list[tuple[str, int]] = []
+    in_fence = False
+    for line_number, raw_line in enumerate(text.splitlines(), start=1):
+        line = raw_line.strip()
+        if line.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        match = re.match(r"^[-*+]\s+\[\s\]\s+(.+?)\s*$", line)
+        if not match:
+            continue
+        item = re.sub(r"!\[[^]]*\]\([^)]*\)", "", match.group(1))
+        item = re.sub(r"\[([^]]+)\]\([^)]*\)", r"\1", item)
+        item = re.sub(r"[`*_]", "", item).strip()[:500]
+        if item:
+            items.append((item, line_number))
+        if len(items) >= MAX_METADATA_OPEN_ITEMS:
+            break
+    return items
 
 
 def _safe_derived_text(text: str | None, fallback: str, label: str, warnings: list[str]) -> str:
@@ -209,32 +248,59 @@ def _run_git(root: Path, *args: str) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
-def _git_facts(root: Path, project_id: str) -> tuple[list[str], list[str]]:
+def _git_facts(root: Path, project_id: str) -> tuple[list[str], list[str], dict[str, Any]]:
     if not (root / ".git").exists():
-        return [], []
+        return [], [], {"repository": False}
+    if is_link_or_reparse(root / ".git"):
+        return (
+            ["Git metadata was skipped because `.git` is a link or reparse point."],
+            [f"{project_id}:git:skipped-reparse-point"],
+            {"repository": False, "skipped_reparse_point": True},
+        )
     signals = ["A Git repository is present."]
     evidence = [f"{project_id}:git:repository"]
+    report: dict[str, Any] = {"repository": True}
     branch = _run_git(root, "branch", "--show-current")
     if branch:
         signals.append(f"The current Git branch is `{branch}`.")
         evidence.append(f"{project_id}:git:branch")
+        report["branch_available"] = True
     status = _run_git(root, "status", "--porcelain=v1", "-z")
     if status is not None:
         entries = [item for item in status.split("\0") if item]
         changed = 0
+        categories = {"config": 0, "docs": 0, "other": 0, "source": 0, "tests": 0}
         index = 0
         while index < len(entries):
             entry = entries[index]
             changed += 1
             status_code = entry[:2]
+            category = classify_changed_path(entry[3:] if len(entry) > 3 else "")
+            categories[category] += 1
             index += 2 if "R" in status_code or "C" in status_code else 1
         signals.append(f"The working tree reports {changed} changed path(s); this is activity evidence, not value evidence.")
         evidence.append(f"{project_id}:git:status")
+        active_categories = ", ".join(f"{name}={count}" for name, count in categories.items() if count)
+        if active_categories:
+            signals.append(
+                f"Changed paths are classified without publishing filenames: {active_categories}; categories do not establish priority."
+            )
+            evidence.append(f"{project_id}:git:change-categories")
+        report["changed_path_count"] = changed
+        report["changed_path_categories"] = categories
     head_date = _run_git(root, "log", "-1", "--format=%cI")
     if head_date:
         signals.append(f"The latest recorded commit date is {head_date}; recency does not establish project importance.")
         evidence.append(f"{project_id}:git:head-date")
-    return signals, evidence
+        report["head_date_available"] = True
+    commits_30d = _run_git(root, "rev-list", "--count", "--since=30 days ago", "HEAD")
+    if commits_30d and commits_30d.isdigit():
+        signals.append(
+            f"Git reports {int(commits_30d)} commit(s) in the last 30 days; activity does not establish usage or value."
+        )
+        evidence.append(f"{project_id}:git:commits-30d")
+        report["commits_30d"] = int(commits_30d)
+    return signals, evidence, report
 
 
 def _load_config(path: Path) -> dict[str, Any]:
@@ -270,6 +336,9 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         project_id = str(_string(project.get("id"), f"projects[{index}].id"))
         raw_root = str(_string(project.get("path"), f"projects[{index}].path"))
         root_candidate = Path(raw_root).expanduser()
+        unresolved_root = path.parent / root_candidate if not root_candidate.is_absolute() else root_candidate
+        if is_link_or_reparse(unresolved_root):
+            raise ManifestError(f"projects[{index}].path must not be a symlink or reparse point")
         root = (path.parent / root_candidate).resolve() if not root_candidate.is_absolute() else root_candidate.resolve()
         if not root.is_dir():
             raise ManifestError(f"projects[{index}].path is not an existing directory")
@@ -304,21 +373,49 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
                 evidence.append(f"{project_id}:path:{relative.as_posix()}")
                 observed_present.append(relative.as_posix())
 
-        git_signals, git_evidence = _git_facts(root, project_id)
+        git_signals, git_evidence, git_report = _git_facts(root, project_id)
         signals.extend(git_signals)
         evidence.extend(git_evidence)
-        readme = documents.get("README.md", "")
+        inventory_signals, inventory_evidence, inventory_report = collect_filename_inventory(root, project_id)
+        signals.extend(inventory_signals)
+        evidence.extend(inventory_evidence)
+        approved_overview = next(
+            (
+                documents[name]
+                for name in ("README.md", "PROJECT_CHARTER.md", "AGENTS.md", "CLAUDE.md")
+                if documents.get(name)
+            ),
+            "",
+        )
         configured_name = _string(project.get("name"), f"projects[{index}].name", optional=True)
         configured_summary = _string(project.get("summary"), f"projects[{index}].summary", optional=True)
         name = configured_name or _safe_derived_text(
-            _markdown_title(readme), project_id, f"projects[{index}].derived_name", metadata_warnings
+            _markdown_title(approved_overview), project_id, f"projects[{index}].derived_name", metadata_warnings
         )
         summary = configured_summary or _safe_derived_text(
-            _markdown_summary(readme),
+            _markdown_summary(approved_overview),
             "Repository metadata was collected from explicitly allowlisted sources; no approved summary is available.",
             f"projects[{index}].derived_summary",
             metadata_warnings,
         )
+        open_items_added = 0
+        for relative_name, document in sorted(documents.items()):
+            for item, line_number in _markdown_open_items(document):
+                safe_item = _safe_derived_text(
+                    item,
+                    "",
+                    f"projects[{index}].metadata_open_item",
+                    metadata_warnings,
+                )
+                if not safe_item:
+                    continue
+                signals.append(f"Approved metadata open item from `{relative_name}`: {safe_item}")
+                evidence.append(f"{project_id}:file:{relative_name}:line-{line_number}")
+                open_items_added += 1
+                if open_items_added >= MAX_METADATA_OPEN_ITEMS:
+                    break
+            if open_items_added >= MAX_METADATA_OPEN_ITEMS:
+                break
         status = _string(project.get("status"), f"projects[{index}].status", optional=True) or (
             "unknown; repository activity is not treated as project status"
         )
@@ -342,6 +439,9 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
                 "metadata_files_read": sorted(documents),
                 "observed_paths": sorted(observed_present),
                 "warnings": metadata_warnings,
+                "git": git_report,
+                "filename_inventory": inventory_report,
+                "metadata_open_item_count": open_items_added,
                 "source_code_bodies_read": 0,
             }
         )

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -66,12 +68,75 @@ def test_candidate_hash_ignores_observation_time(tmp_path: Path) -> None:
     assert first["facts_sha256"] == second["facts_sha256"]
 
 
+def test_scanner_skips_markdown_rule_when_deriving_summary(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "README.md").write_text("# Project\n\n---\n\nActual summary.\n", encoding="utf-8")
+    config = write_config(tmp_path, project)
+
+    candidate, _ = collect_candidate(config)
+
+    assert candidate["projects"][0]["summary"] == "Actual summary."
+
+
+def test_scanner_uses_approved_agents_metadata_when_readme_is_missing(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "AGENTS.md").write_text("# Agent-governed project\n\nSafe project overview.\n", encoding="utf-8")
+    config = write_config(tmp_path, project, allow_files=["AGENTS.md"])
+
+    candidate, _ = collect_candidate(config)
+
+    assert candidate["projects"][0]["name"] == "Agent-governed project"
+    assert candidate["projects"][0]["summary"] == "Safe project overview."
+
+
+def test_scanner_reports_coarse_git_activity_without_changed_filenames(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "README.md").write_text("# Git facts\n\nSafe summary.\n", encoding="utf-8")
+    (project / "app.py").write_text("print('first')\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=project, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=project, check=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=project, check=True)
+    subprocess.run(["git", "add", "."], cwd=project, check=True)
+    subprocess.run(["git", "commit", "-qm", "initial"], cwd=project, check=True)
+    (project / "app.py").write_text("print('changed')\n", encoding="utf-8")
+    (project / "docs").mkdir()
+    (project / "docs" / "private-plan.md").write_text("private", encoding="utf-8")
+    config = write_config(tmp_path, project)
+
+    candidate, report = collect_candidate(config)
+    rendered = json.dumps(candidate)
+
+    assert "source=1" in rendered
+    assert "docs=1" in rendered
+    assert "private-plan.md" not in rendered
+    assert "commit(s) in the last 30 days" in rendered
+    assert report["projects"][0]["git"]["changed_path_categories"]["source"] == 1
+
+
 def test_scanner_rejects_path_traversal(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()
     config = write_config(tmp_path, project, allow_files=["../private.md"])
 
     with pytest.raises(ManifestError, match="relative path"):
+        collect_candidate(config)
+
+
+def test_scanner_rejects_project_root_directory_link(tmp_path: Path) -> None:
+    private = tmp_path / "private"
+    private.mkdir()
+    (private / "README.md").write_text("# Private\n", encoding="utf-8")
+    linked = tmp_path / "linked"
+    try:
+        os.symlink(private, linked, target_is_directory=True)
+    except OSError:
+        pytest.skip("directory symlinks are unavailable in this environment")
+    config = write_config(tmp_path, linked)
+
+    with pytest.raises(ManifestError, match="symlink or reparse point"):
         collect_candidate(config)
 
 
@@ -124,6 +189,42 @@ def test_scanner_omits_unsafe_automatically_derived_summary(tmp_path: Path) -> N
 
     assert "C:/Users" not in json.dumps(candidate)
     assert "no approved summary" in candidate["projects"][0]["summary"]
+    assert report["projects"][0]["warnings"]
+
+
+def test_scanner_extracts_bounded_open_items_from_approved_metadata_only(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "README.md").write_text(
+        "# Planned project\n\nSafe summary.\n\n- [ ] Ship the reviewed workflow\n- [x] Completed work\n",
+        encoding="utf-8",
+    )
+    (project / "private.py").write_text("# TODO: must never be read", encoding="utf-8")
+    config = write_config(tmp_path, project)
+
+    candidate, report = collect_candidate(config)
+    rendered = json.dumps(candidate)
+
+    assert "Ship the reviewed workflow" in rendered
+    assert "Completed work" not in rendered
+    assert "must never be read" not in rendered
+    assert "sample:file:README.md:line-5" in rendered
+    assert report["projects"][0]["metadata_open_item_count"] == 1
+
+
+def test_scanner_omits_absolute_path_from_metadata_open_item(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "README.md").write_text(
+        "# Safe\n\nSafe summary.\n\n- [ ] Open C:/Users/example/private.txt\n",
+        encoding="utf-8",
+    )
+    config = write_config(tmp_path, project)
+
+    candidate, report = collect_candidate(config)
+
+    assert "C:/Users" not in json.dumps(candidate)
+    assert report["projects"][0]["metadata_open_item_count"] == 0
     assert report["projects"][0]["warnings"]
 
 

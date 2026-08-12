@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from .adapters import is_link_or_reparse
 from .core import ManifestError, _atomic_write_text
 from .scanner import DEFAULT_ALLOW_FILES, SYNC_DIRECTORY_MARKERS
 
@@ -27,7 +28,6 @@ PROJECT_MARKERS = {
     "pyproject.toml",
 }
 PROJECT_DOCUMENT_SUFFIXES = {".md"}
-WINDOWS_REPARSE_POINT = 0x400
 EXCLUDED_DIRECTORY_NAMES = {
     ".git",
     ".idea",
@@ -53,15 +53,6 @@ class DiscoveryResult:
 
 def _is_cloud_synced(path: Path) -> bool:
     return any(marker in part.lower() for part in path.parts for marker in SYNC_DIRECTORY_MARKERS)
-
-
-def _is_link_or_reparse(path: Path) -> bool:
-    if path.is_symlink():
-        return True
-    try:
-        return bool(getattr(path.stat(), "st_file_attributes", 0) & WINDOWS_REPARSE_POINT)
-    except OSError:
-        return True
 
 
 def _project_id(name: str) -> str:
@@ -99,7 +90,7 @@ def discover_projects(roots: Iterable[Path | str]) -> list[dict[str, object]]:
     resolved_roots: list[Path] = []
     for index, raw_root in enumerate(roots):
         unresolved_root = Path(raw_root).expanduser()
-        if _is_link_or_reparse(unresolved_root):
+        if is_link_or_reparse(unresolved_root):
             raise ManifestError(f"roots[{index}] must not be a symlink or reparse point")
         root = unresolved_root.resolve()
         if not root.is_dir():
@@ -118,7 +109,7 @@ def discover_projects(roots: Iterable[Path | str]) -> list[dict[str, object]]:
         for child in children:
             if child.name.casefold() in EXCLUDED_DIRECTORY_NAMES:
                 continue
-            if _is_link_or_reparse(child) or not child.is_dir() or not _is_project_candidate(child):
+            if is_link_or_reparse(child) or not child.is_dir() or not _is_project_candidate(child):
                 continue
             resolved = child.resolve()
             if not resolved.is_relative_to(root):

@@ -6,6 +6,10 @@
 - Keep discovered absolute paths confined to a private, reviewable configuration.
 - Reject cloud-synced config targets, directory links, reparse points, root escapes, and accidental overwrite.
 - Omit automatically derived absolute paths from summaries while continuing to fail closed on likely secrets.
+- Add bounded filename-only entry-point and test inventory with no source-body reads.
+- Add coarse Git change categories and 30-day activity facts without publishing changed filenames.
+- Apply link and Windows reparse-point protection to manually configured project roots and Git metadata.
+- Extract at most five open checklist items from approved metadata with relative line evidence; source TODO comments remain unread.
 
 ## 0.2.0 - 2026-08-12
 

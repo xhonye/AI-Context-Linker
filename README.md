@@ -58,6 +58,9 @@ ChatGPT 能正确承认自己无法读取本地磁盘，但也因此不知道今
 ## V0.2 已有能力
 
 - 从私有 workspace 配置自动读取明确 allowlist 的 README/AGENTS、Git 事实和指定路径存在性。
+- 以限深、限量、只看文件名的方式识别常规入口和测试文件，不读取其内容或声称测试已通过。
+- 将 Git 未提交路径归类为 source、tests、docs、config、other，只发布数量而不发布文件名。
+- 从已批准的 README/AGENTS 元数据提取最多 5 条未完成复选项并保留相对行号证据；不扫描源码 TODO 注释。
 - 先生成 `candidate-manifest.json` 和 `scan-report.json`，再由人审阅发布。
 - 从严格白名单 JSON manifest 生成稳定的 `ai_context_linker.md`。
 - 同时生成派生关系图 `ai_context_linker.graph.json`。
@@ -90,7 +93,7 @@ python -m ai_context_linker build `
   --output-dir output
 ```
 
-`discover` 只查看显式根目录的直属子目录、项目标志文件是否存在，不读取源码或元数据正文。它可能多给候选，但不会替你决定哪些项目应当发布。包含本机路径的 workspace 配置必须留在私有目录；只有最终 `build` 输出才适合放入专用 Drive Context 目录。
+`discover` 只查看显式根目录的直属子目录、项目标志文件是否存在，不读取源码或元数据正文。它会把存在的 README、AGENTS、CLAUDE、ROADMAP、TODO、STATUS、CHANGELOG 和 PROJECT_CHARTER 根目录文件列为待批准元数据，但不会替你决定哪些项目或文件应当发布。包含本机路径的 workspace 配置必须留在私有目录；只有最终 `build` 输出才适合放入专用 Drive Context 目录。
 
 然后将 `output/ai_context_linker.md` 放到一个只用于 AI Context Linker 的 Google Drive 目录。不要把源码目录、工作区根目录或私人数据目录加入同步范围。
 

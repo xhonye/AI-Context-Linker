@@ -44,3 +44,6 @@ ChatGPT 的 Google Drive 集成会访问或索引用户授权范围内的内容�
 - `review_dir` 显示命中常见 Google Drive、OneDrive、Dropbox 或 iCloud 目录名时会被拒绝，避免未审阅候选文件先行同步；这是防误操作护栏，不是通用云盘检测。
 - `discover` 只枚举用户显式指定根目录的直属子目录和项目标志存在性；包含绝对路径的候选配置属于私有输入。目录链接、Windows reparse point、解析后越出根目录的候选以及常见生成目录会被排除。
 - 自动从 README 提取的标题或摘要若包含绝对路径，会降级为待人工补充；疑似 secret 仍使整个扫描失败关闭。用户手填字段始终经过完整发布校验。
+- 文件名清单适配器有目录剪枝、深度与条目上限；只发布固定入口文件名、测试数量和是否截断，不发布任意文件名。Git 变更只发布粗粒度分类数量，不发布具体路径。
+- 手工 workspace 配置不能绕过目录边界：项目根与 `.git` 的 symlink 或 Windows reparse point 会被拒绝或跳过。
+- 开放事项只来自已批准的根目录 README、AGENTS、CLAUDE、ROADMAP、TODO、STATUS、CHANGELOG 或 PROJECT_CHARTER 中的 Markdown 未完成复选项，最多 5 条并经过发布安全校验；源码 TODO、内部 `task_plan.md`/`progress.md`、任意任务数据库和私人运行记录不属于默认采集面。
