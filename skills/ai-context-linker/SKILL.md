@@ -1,6 +1,6 @@
 ---
 name: ai-context-linker
-description: Build and update privacy-safe AI Context Linker bundles from an explicitly approved JSON manifest. Use when a user asks to prepare local project context for ChatGPT or another AI assistant, validate an AI Context Linker manifest, generate a project briefing or relationship graph, or publish reviewed context to an explicit local or Drive-synced directory without uploading source code.
+description: Scan allowlisted local project metadata and build privacy-safe AI Context Linker bundles from a reviewed JSON manifest. Use when a user asks to prepare or refresh local project context for ChatGPT or another AI assistant, validate an AI Context Linker workspace config or manifest, generate a project briefing or relationship graph, or publish reviewed context to an explicit local or Drive-synced directory without uploading source code.
 ---
 
 # AI Context Linker
@@ -9,17 +9,23 @@ Use the standalone `ai-context-linker` CLI as the execution truth. Keep this Ski
 
 ## Workflow
 
-1. Locate an existing approved manifest. If none exists, copy the repository's `examples/real-project-template.json` into the user's private data area and edit only approved high-level facts.
-2. Refuse to include source code, diffs, credentials, connection strings, absolute local paths, private runtime data, or unconfirmed model inference.
-3. Show the exact manifest or meaningful diff before writing to a cloud-synced destination. Keep facts, unknowns, and derived relationships distinct.
-4. Require an explicit output directory. Never select a workspace root, repository root, home directory, or broad Drive directory.
-5. Run:
+1. Locate a private workspace config or an existing approved manifest. Keep configs containing local paths outside the repository and cloud-synced directories.
+2. When a workspace config exists, generate review artifacts first:
+
+```text
+ai-context-linker scan --config <private-workspace.json> --review-dir <private-review-directory> [--previous-manifest <approved.json>]
+```
+
+3. Confirm the scan report says `source_code_bodies_read: 0`. Review the candidate manifest and its change summary. Refuse source code, diffs, credentials, connection strings, private runtime data, or unconfirmed model inference.
+4. Require the user to approve the candidate before writing to a cloud-synced destination. Keep facts, unknowns, and derived relationships distinct.
+5. Require an explicit output directory. Never select a workspace root, repository root, home directory, or broad Drive directory.
+6. Run:
 
 ```text
 ai-context-linker build --manifest <approved.json> --output-dir <explicit-directory>
 ```
 
-6. Report the two generated files and any validation failure. Do not bypass a failure or weaken a filter.
+7. Report the candidate/report paths, the two generated files, the fact hash and any validation failure. Do not bypass a failure or weaken a filter.
 
 ## Missing CLI
 

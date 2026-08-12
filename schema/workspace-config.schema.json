@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Context Linker private workspace configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "workspace", "projects", "relationships"],
+  "properties": {
+    "schema_version": {"const": "0.2"},
+    "workspace": {"$ref": "context-manifest.schema.json#/$defs/workspace"},
+    "projects": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/projectSource"}},
+    "relationships": {"type": "array", "items": {"$ref": "context-manifest.schema.json#/$defs/relationship"}}
+  },
+  "$defs": {
+    "relativePath": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "projectSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path"],
+      "properties": {
+        "id": {"$ref": "context-manifest.schema.json#/$defs/identifier"},
+        "path": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "name": {"$ref": "context-manifest.schema.json#/$defs/safeString"},
+        "summary": {"$ref": "context-manifest.schema.json#/$defs/safeString"},
+        "status": {"$ref": "context-manifest.schema.json#/$defs/safeString"},
+        "allow_files": {"type": "array", "items": {"$ref": "#/$defs/relativePath"}},
+        "observe_paths": {"type": "array", "items": {"$ref": "#/$defs/relativePath"}},
+        "risks": {"$ref": "context-manifest.schema.json#/$defs/safeStringArray"},
+        "open_questions": {"$ref": "context-manifest.schema.json#/$defs/safeStringArray"}
+      }
+    }
+  }
+}

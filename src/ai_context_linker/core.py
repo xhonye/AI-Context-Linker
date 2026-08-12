@@ -1,8 +1,9 @@
 """Strict manifest validation and deterministic context rendering.
 
-V0.1 deliberately does not scan source code.  It accepts only a small,
-explicitly approved manifest and fails closed when the payload contains an
-unknown field, a likely secret, or a machine-specific absolute path.
+The publisher accepts only a small, explicitly approved manifest and fails
+closed when the payload contains an unknown field, a likely secret, or a
+machine-specific absolute path. The optional V0.2 scanner reads only explicitly
+allowlisted metadata and never reads source-code bodies.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from typing import Any
 
 SCHEMA_VERSION = "0.1"
 
-ROOT_KEYS = {"schema_version", "generated_at", "workspace", "projects", "relationships"}
+ROOT_KEYS = {"schema_version", "generated_at", "facts_sha256", "workspace", "projects", "relationships"}
 WORKSPACE_KEYS = {"name", "summary", "current_focus", "decisions", "unknowns"}
 PROJECT_KEYS = {
     "id",
@@ -197,6 +198,11 @@ def validate_manifest(raw: Any) -> dict[str, Any]:
             key=lambda relationship: (relationship["source"], relationship["target"], relationship["type"]),
         ),
     }
+    if "facts_sha256" in manifest:
+        facts_sha256 = _require_string(manifest["facts_sha256"], "facts_sha256")
+        if not re.fullmatch(r"[0-9a-f]{64}", facts_sha256):
+            raise ManifestError("facts_sha256 must be a lowercase SHA-256 digest")
+        normalized["facts_sha256"] = facts_sha256
     _validate_safe_strings(normalized)
     return normalized
 
@@ -279,6 +285,8 @@ def render_markdown(manifest: dict[str, Any]) -> str:
         f"**当前关注：** {workspace['current_focus']}",
         "",
     ]
+    if manifest.get("facts_sha256"):
+        lines.insert(4, f"> 事实快照：`{manifest['facts_sha256']}`")
     lines.extend(_bullet_section("已确认决策", workspace["decisions"]))
     lines.extend(_bullet_section("仍然未知", workspace["unknowns"]))
 

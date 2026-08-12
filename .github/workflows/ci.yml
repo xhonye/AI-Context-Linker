@@ -22,6 +22,10 @@ jobs:
       - run: python -m pip install -e ".[dev]"
       - run: python -m pytest -q
       - run: >-
+          python -m ai_context_linker scan
+          --config examples/synthetic-workspace-config.json
+          --review-dir output/review
+      - run: >-
           python -m ai_context_linker build
-          --manifest examples/synthetic-manifest.json
+          --manifest output/review/candidate-manifest.json
           --output-dir output

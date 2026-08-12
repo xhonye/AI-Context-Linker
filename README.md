@@ -55,12 +55,15 @@ ChatGPT 能正确承认自己无法读取本地磁盘，但也因此不知道今
 - 云端只出现经过允许的最小信息，默认不出现源码、密钥、本机路径和私人运行数据。
 - 图谱帮助模型看到依赖、归属和约束，但它始终可从事实重建，不充当事实真源。
 
-## V0.1 已有能力
+## V0.2 已有能力
 
+- 从私有 workspace 配置自动读取明确 allowlist 的 README/AGENTS、Git 事实和指定路径存在性。
+- 先生成 `candidate-manifest.json` 和 `scan-report.json`，再由人审阅发布。
 - 从严格白名单 JSON manifest 生成稳定的 `ai_context_linker.md`。
 - 同时生成派生关系图 `ai_context_linker.graph.json`。
 - 拒绝未知字段、疑似密钥、本机绝对路径和悬空关系。
-- 不扫描仓库、不联网、不上传、不自动读取私人数据。
+- 事实快照带 SHA-256，可与上一份批准 manifest 比较项目和关系变化。
+- 不读取源码正文、不联网、不上传、不自动读取私人运行数据。
 
 ## 快速体验
 
@@ -68,8 +71,13 @@ ChatGPT 能正确承认自己无法读取本地磁盘，但也因此不知道今
 git clone https://github.com/xhonye/AI-Context-Linker.git
 Set-Location AI-Context-Linker
 python -m pip install -e .
+python -m ai_context_linker scan `
+  --config examples/synthetic-workspace-config.json `
+  --review-dir output/review
+
+# 审阅 candidate-manifest.json 和 scan-report.json 后再发布
 python -m ai_context_linker build `
-  --manifest examples/synthetic-manifest.json `
+  --manifest output/review/candidate-manifest.json `
   --output-dir output
 ```
 
@@ -77,11 +85,11 @@ python -m ai_context_linker build `
 
 ## 后续方向
 
-### V0.2 — 从手写清单到可审计的本地采集
+### V0.2 — 从手写清单到可审计的本地采集 ✅
 
-- 引入明确 allowlist 的确定性仓库适配器；
-- 为每条事实保留来源、观察时间和过期状态；
-- 发布前展示新增、删除和敏感项变化，由人确认。
+- 已引入明确 allowlist 的确定性本地采集器；
+- 已为自动采集事实生成类型化证据标签和快照哈希；
+- 已在发布前生成新增、删除、变化项目和关系预览。
 
 ### V0.3 — 可追溯变化与项目图谱
 
@@ -115,6 +123,9 @@ AI Context Linker 尝试建立中间层：用结构化、最小化、可追溯�
 - 如何让同一份项目认知服务于 ChatGPT、编码 Agent 和其他 AI 工具，而不绑定某个产品。
 
 AI Context Linker 希望把这一层做成可审阅、可测试、可扩展的开放基础设施。
+
+与图谱和代码 Context 项目的自动化边界对比见
+[`docs/competitive-landscape.md`](docs/competitive-landscape.md)。
 
 ## 产品边界
 

@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.2",
+  "workspace": {
+    "name": "Synthetic workspace",
+    "summary": "A safe fixture for demonstrating deterministic local collection.",
+    "current_focus": "Review the generated candidate before publishing it.",
+    "decisions": ["Only explicitly listed projects and metadata files may be inspected."],
+    "unknowns": ["No claim about real-world usage is recorded."]
+  },
+  "projects": [
+    {
+      "id": "sample-project",
+      "path": "synthetic-project",
+      "allow_files": ["README.md"],
+      "observe_paths": ["tests"],
+      "risks": ["This is a synthetic fixture, not adoption evidence."],
+      "open_questions": ["Which additional metadata adapters should be supported?"]
+    }
+  ],
+  "relationships": []
+}

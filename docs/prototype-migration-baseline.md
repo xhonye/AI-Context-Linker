@@ -59,7 +59,8 @@ The estimate uses ten equal workflow stages:
 | `sol-context`: local workspace to facts-only briefing | **about 80%** | Discovery, collection, relationships, deltas, safety, rendering and stable publishing are scripted; approval and graph output are not complete |
 | `sol-context`: full enriched briefing | **about 70%** | One semantic stage still requires an external model to read facts and selected evidence, then produce a hash-bound enrichment file |
 | AI Context Linker: approved manifest to bundle | **100%** | Validation, Markdown, graph and atomic output are deterministic |
-| AI Context Linker: local workspace to bundle | **about 35%** | The critical acquisition, provenance, change-preview and approval workflow has not yet been migrated |
+| AI Context Linker V0.1: local workspace to bundle | **about 35%** | The critical acquisition, provenance, change-preview and approval workflow had not yet been migrated |
+| AI Context Linker V0.2: configured local workspace to bundle | **about 75–80%** | Allowlist collection, generated evidence labels, snapshot hashes and change review are scripted; project selection, explicit relationships and publication approval remain human decisions |
 
 These percentages describe implemented workflow stages. They do not mean that
 35% of the source code or 80% of the product value has been completed.
@@ -80,7 +81,7 @@ read a much larger fact surface to produce its summary, and it must be regenerat
 whenever the bound fact hash changes. At the audit date, the newest fact snapshot
 had already changed, so the previous enrichment could not be safely reused.
 
-AI Context Linker V0.1 requires **0% model-generated content at build time**.
+AI Context Linker V0.2 requires **0% model-generated content at build time**.
 ChatGPT performs interpretation when the user asks a question. Preparing the
 manifest is currently a human task and may be AI-assisted, but AI-generated
 claims must never become confirmed facts merely because a model wrote them.
@@ -99,6 +100,7 @@ mandatory pre-publication AI at zero:
 6. keep semantic enrichment as an optional, clearly labelled layer after the
    deterministic bundle has been built.
 
-Completing the first five items should move the estimated local-workspace
-automation from about **35% to 75–80%** without giving a model authority over the
-fact layer.
+V0.2 completed this first migration slice and moved estimated automation from
+about **35% to 75–80%** without giving a model authority over the fact layer.
+Automatic relationship discovery remains deferred until it can preserve the
+same evidence and review guarantees.

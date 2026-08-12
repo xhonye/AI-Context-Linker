@@ -15,8 +15,11 @@ AI Context Linker welcomes focused changes that preserve its privacy-first bound
 ```powershell
 python -m pip install -e ".[dev]"
 python -m pytest -q
+python -m ai_context_linker scan `
+  --config examples/synthetic-workspace-config.json `
+  --review-dir output/review
 python -m ai_context_linker build `
-  --manifest examples/synthetic-manifest.json `
+  --manifest output/review/candidate-manifest.json `
   --output-dir output
 ```
 
