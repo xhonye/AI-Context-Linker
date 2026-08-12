@@ -7,7 +7,6 @@ the private scanner configuration.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import subprocess
@@ -16,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .core import ManifestError, _atomic_write_text, load_manifest, validate_manifest
+from .core import ManifestError, _atomic_write_text, facts_sha256, load_manifest, validate_manifest
 
 
 CONFIG_KEYS = {"schema_version", "workspace", "projects", "relationships"}
@@ -44,6 +43,10 @@ ALLOWED_METADATA_NAMES = {
     "SECURITY.md",
 }
 MAX_METADATA_BYTES = 64 * 1024
+FORBIDDEN_OBSERVED_PARTS = {".git", ".ssh"}
+FORBIDDEN_OBSERVED_MARKERS = {"credential", "secret", "token"}
+FORBIDDEN_OBSERVED_SUFFIXES = {".db", ".key", ".p12", ".pem", ".sqlite", ".sqlite3"}
+SYNC_DIRECTORY_MARKERS = {"dropbox", "google drive", "googledrive", "icloud", "onedrive"}
 
 
 @dataclass(frozen=True)
@@ -94,6 +97,20 @@ def _metadata_path(raw: str, label: str) -> Path:
     if candidate.name not in ALLOWED_METADATA_NAMES:
         allowed = ", ".join(sorted(ALLOWED_METADATA_NAMES))
         raise ManifestError(f"{label} is not an allowed metadata filename; choose one of: {allowed}")
+    return candidate
+
+
+def _observable_path(raw: str, label: str) -> Path:
+    candidate = _safe_relative_path(raw, label)
+    lowered_parts = [part.lower() for part in candidate.parts]
+    sensitive_name = any(
+        part in FORBIDDEN_OBSERVED_PARTS
+        or part.startswith(".env")
+        or any(marker in part for marker in FORBIDDEN_OBSERVED_MARKERS)
+        for part in lowered_parts
+    )
+    if sensitive_name or candidate.suffix.lower() in FORBIDDEN_OBSERVED_SUFFIXES:
+        raise ManifestError(f"{label} names a sensitive path that must not enter the publish surface")
     return candidate
 
 
@@ -150,7 +167,16 @@ def _markdown_summary(text: str) -> str | None:
 def _run_git(root: Path, *args: str) -> str | None:
     try:
         result = subprocess.run(
-            ["git", "-c", "core.quotepath=false", *args],
+            [
+                "git",
+                "-c",
+                "core.quotepath=false",
+                "-c",
+                "core.fsmonitor=false",
+                "-c",
+                "submodule.recurse=false",
+                *args,
+            ],
             cwd=root,
             check=False,
             capture_output=True,
@@ -189,14 +215,6 @@ def _git_facts(root: Path, project_id: str) -> tuple[list[str], list[str]]:
         signals.append(f"The latest recorded commit date is {head_date}; recency does not establish project importance.")
         evidence.append(f"{project_id}:git:head-date")
     return signals, evidence
-
-
-def _canonical_hash(manifest: dict[str, Any]) -> str:
-    payload = dict(manifest)
-    payload.pop("generated_at", None)
-    payload.pop("facts_sha256", None)
-    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
 
 
 def _load_config(path: Path) -> dict[str, Any]:
@@ -254,7 +272,7 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
                 evidence.append(f"{project_id}:file:{relative.as_posix()}")
 
         for item_index, raw_relative in enumerate(observed_paths):
-            relative = _safe_relative_path(raw_relative, f"projects[{index}].observe_paths[{item_index}]")
+            relative = _observable_path(raw_relative, f"projects[{index}].observe_paths[{item_index}]")
             unresolved = root / relative
             if unresolved.is_symlink():
                 raise ManifestError(f"projects[{index}].observe_paths[{item_index}] must not be a symlink")
@@ -315,7 +333,8 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         "projects": projects,
         "relationships": relationships,
     }
-    candidate["facts_sha256"] = _canonical_hash(candidate)
+    candidate = validate_manifest(candidate)
+    candidate["facts_sha256"] = facts_sha256(candidate)
     candidate = validate_manifest(candidate)
     report = {
         "schema_version": "0.2",
@@ -323,6 +342,7 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         "facts_sha256": candidate["facts_sha256"],
         "project_count": len(projects),
         "requires_human_approval": True,
+        "untrusted_metadata_requires_review": True,
         "source_code_bodies_read": 0,
         "projects": sorted(report_projects, key=lambda item: item["id"]),
     }
@@ -373,7 +393,9 @@ def scan_workspace(
     previous = load_manifest(previous_manifest) if previous_manifest is not None else None
     report["changes"] = _change_summary(candidate, previous)
     report["previous_facts_sha256"] = previous.get("facts_sha256") if previous else None
-    destination = Path(review_dir)
+    destination = Path(review_dir).resolve()
+    if any(marker in part.lower() for part in destination.parts for marker in SYNC_DIRECTORY_MARKERS):
+        raise ManifestError("review_dir appears to be cloud-synced; review artifacts must stay private until build")
     candidate_path = destination / "candidate-manifest.json"
     report_path = destination / "scan-report.json"
     _atomic_write_text(candidate_path, json.dumps(candidate, ensure_ascii=False, indent=2) + "\n")

@@ -107,3 +107,11 @@ def test_relationship_type_cannot_inject_markup() -> None:
 
     with pytest.raises(ManifestError, match="lowercase letters"):
         validate_manifest(manifest)
+
+
+def test_fact_hash_must_match_manifest_content() -> None:
+    manifest = valid_manifest()
+    manifest["facts_sha256"] = "0" * 64
+
+    with pytest.raises(ManifestError, match="does not match"):
+        validate_manifest(manifest)

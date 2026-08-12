@@ -12,4 +12,8 @@ Include the affected version, minimal synthetic reproduction, expected boundary,
 
 ## Security boundary
 
-The core compiler must remain local and network-free. It accepts only an explicit manifest, rejects unsupported fields and common unsafe strings, and writes only to a caller-supplied directory. These controls reduce accidental disclosure but do not replace human review of a real manifest before cloud synchronization.
+The scanner and compiler must remain local and network-free. The scanner reads only explicitly listed metadata filenames, rejects source-code filenames, sensitive observed paths, path traversal, and symlink escapes, and disables Git filesystem monitors and submodule recursion before producing private review artifacts. The compiler accepts only an explicit manifest, verifies its fact hash, rejects unsupported fields and common unsafe strings, and writes only to a caller-supplied directory.
+
+Review artifacts are rejected when their path visibly targets a common Google Drive, OneDrive, Dropbox, or iCloud directory. This is a guardrail, not universal cloud-folder detection.
+
+These controls reduce accidental disclosure; they do not make arbitrary natural language safe. Treat README and other project metadata as untrusted input and review every real candidate manifest before cloud synchronization.

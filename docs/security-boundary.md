@@ -35,7 +35,10 @@ ChatGPT 的 Google Drive 集成会访问或索引用户授权范围内的内容�
 ## V0.2 本地采集边界
 
 - workspace 配置是私有文件，可包含本机项目路径，但不得放入发布目录。
-- 采集器只读每个项目明确列出的 `allow_files` 文本和 `observe_paths` 存在性；`allow_files` 还必须属于内置项目元数据文件名单，不接受源码文件。
+- 采集器只读每个项目明确列出的 `allow_files` 文本和 `observe_paths` 存在性；`allow_files` 还必须属于内置项目元数据文件名单，不接受源码文件；常见 secret、credential、SSH 和数据库路径即使只检查存在性也会被拒绝。
 - 元数据文件限制为 64 KiB UTF-8 文本，禁止路径穿越和文件符号链接。
 - Git 信号只记录分支、变更路径数和最新提交时间，不读 diff，不把活跃度当成价值。
 - 候选 manifest 和扫描报告不包含项目根路径；发布仍是独立的第二步。
+- `facts_sha256` 在 build 时会重新计算；审阅后内容被修改但哈希未更新时会失败关闭。
+- README、AGENTS 等自然语言仍属于不可信输入；工具不会声称自动识别所有隐私或提示词注入，真实候选 manifest 必须人工审阅。
+- `review_dir` 显示命中常见 Google Drive、OneDrive、Dropbox 或 iCloud 目录名时会被拒绝，避免未审阅候选文件先行同步；这是防误操作护栏，不是通用云盘检测。

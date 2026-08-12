@@ -8,6 +8,7 @@ allowlisted metadata and never reads source-code bodies.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -58,6 +59,15 @@ class ManifestError(ValueError):
 class BundlePaths:
     markdown: Path
     graph: Path
+
+
+def facts_sha256(manifest: dict[str, Any]) -> str:
+    """Hash fact content while excluding observation time and the digest itself."""
+    payload = dict(manifest)
+    payload.pop("generated_at", None)
+    payload.pop("facts_sha256", None)
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _require_mapping(value: Any, label: str) -> dict[str, Any]:
@@ -199,10 +209,13 @@ def validate_manifest(raw: Any) -> dict[str, Any]:
         ),
     }
     if "facts_sha256" in manifest:
-        facts_sha256 = _require_string(manifest["facts_sha256"], "facts_sha256")
-        if not re.fullmatch(r"[0-9a-f]{64}", facts_sha256):
+        supplied_sha256 = _require_string(manifest["facts_sha256"], "facts_sha256")
+        if not re.fullmatch(r"[0-9a-f]{64}", supplied_sha256):
             raise ManifestError("facts_sha256 must be a lowercase SHA-256 digest")
-        normalized["facts_sha256"] = facts_sha256
+        expected_sha256 = facts_sha256(normalized)
+        if supplied_sha256 != expected_sha256:
+            raise ManifestError("facts_sha256 does not match the manifest facts")
+        normalized["facts_sha256"] = supplied_sha256
     _validate_safe_strings(normalized)
     return normalized
 

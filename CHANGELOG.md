@@ -7,6 +7,9 @@
 - Add deterministic fact hashes and previous-snapshot change summaries.
 - Keep local paths out of candidate manifests and generated bundles.
 - Preserve a two-step human approval gate with zero required model calls.
+- Verify fact hashes at publish time and reject sensitive observed-path names.
+- Disable Git filesystem monitors and submodule recursion during metadata collection.
+- Reject private review output paths that visibly target common cloud-sync folders.
 
 ## 0.1.0 - 2026-08-12
 

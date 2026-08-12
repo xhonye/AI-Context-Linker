@@ -85,6 +85,19 @@ def test_scanner_rejects_source_code_even_when_explicitly_listed(tmp_path: Path)
         collect_candidate(config)
 
 
+@pytest.mark.parametrize(
+    "observed_path",
+    [".env", ".env.local", ".git/config", "credentials.json", "private.sqlite3", "secrets/token.txt"],
+)
+def test_scanner_rejects_sensitive_observed_path_names(tmp_path: Path, observed_path: str) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    config = write_config(tmp_path, project, observe_paths=[observed_path])
+
+    with pytest.raises(ManifestError, match="sensitive path"):
+        collect_candidate(config)
+
+
 def test_scanner_fails_closed_when_allowlisted_metadata_contains_secret(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()
@@ -135,3 +148,27 @@ def test_scan_report_compares_with_previous_approved_manifest(tmp_path: Path) ->
     assert report["changes"]["changed"] is True
     assert report["changes"]["changed_projects"] == ["sample"]
     assert report["previous_facts_sha256"]
+
+
+def test_build_rejects_candidate_changed_after_hashing(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "README.md").write_text("# Original\n\nOriginal summary.\n", encoding="utf-8")
+    config = write_config(tmp_path, project)
+    scan_paths = scan_workspace(config, tmp_path / "review", observed_at="2026-08-12T12:00:00+08:00")
+    candidate = json.loads(scan_paths.candidate_manifest.read_text(encoding="utf-8"))
+    candidate["projects"][0]["summary"] = "Changed after review."
+    scan_paths.candidate_manifest.write_text(json.dumps(candidate), encoding="utf-8")
+
+    with pytest.raises(ManifestError, match="does not match"):
+        build_bundle(scan_paths.candidate_manifest, tmp_path / "publish")
+
+
+def test_scan_rejects_obvious_cloud_synced_review_directory(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "README.md").write_text("# Private review\n\nReview locally first.\n", encoding="utf-8")
+    config = write_config(tmp_path, project)
+
+    with pytest.raises(ManifestError, match="cloud-synced"):
+        scan_workspace(config, tmp_path / "OneDrive" / "review")
