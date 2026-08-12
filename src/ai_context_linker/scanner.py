@@ -15,7 +15,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .core import ManifestError, _atomic_write_text, facts_sha256, load_manifest, validate_manifest
+from .core import (
+    ManifestError,
+    _atomic_write_text,
+    facts_sha256,
+    load_manifest,
+    validate_manifest,
+    validate_publish_text,
+)
 
 
 CONFIG_KEYS = {"schema_version", "workspace", "projects", "relationships"}
@@ -164,6 +171,19 @@ def _markdown_summary(text: str) -> str | None:
     return " ".join(paragraph)[:1000] or None
 
 
+def _safe_derived_text(text: str | None, fallback: str, label: str, warnings: list[str]) -> str:
+    if not text:
+        return fallback
+    try:
+        validate_publish_text(text, label)
+    except ManifestError as exc:
+        if "likely secret" in str(exc):
+            raise
+        warnings.append(f"{label} was omitted because automatically derived text failed publish-safety checks.")
+        return fallback
+    return text
+
+
 def _run_git(root: Path, *args: str) -> str | None:
     try:
         result = subprocess.run(
@@ -259,6 +279,7 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         documents: dict[str, str] = {}
         evidence: list[str] = []
         signals: list[str] = []
+        metadata_warnings: list[str] = []
         observed_present: list[str] = []
         for item_index, raw_relative in enumerate(allow_files):
             relative = _metadata_path(raw_relative, f"projects[{index}].allow_files[{item_index}]")
@@ -287,11 +308,16 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         signals.extend(git_signals)
         evidence.extend(git_evidence)
         readme = documents.get("README.md", "")
-        name = _string(project.get("name"), f"projects[{index}].name", optional=True) or _markdown_title(readme) or project_id
-        summary = (
-            _string(project.get("summary"), f"projects[{index}].summary", optional=True)
-            or _markdown_summary(readme)
-            or "Repository metadata was collected from explicitly allowlisted sources; no approved summary is available."
+        configured_name = _string(project.get("name"), f"projects[{index}].name", optional=True)
+        configured_summary = _string(project.get("summary"), f"projects[{index}].summary", optional=True)
+        name = configured_name or _safe_derived_text(
+            _markdown_title(readme), project_id, f"projects[{index}].derived_name", metadata_warnings
+        )
+        summary = configured_summary or _safe_derived_text(
+            _markdown_summary(readme),
+            "Repository metadata was collected from explicitly allowlisted sources; no approved summary is available.",
+            f"projects[{index}].derived_summary",
+            metadata_warnings,
         )
         status = _string(project.get("status"), f"projects[{index}].status", optional=True) or (
             "unknown; repository activity is not treated as project status"
@@ -315,6 +341,7 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
                 "id": project_id,
                 "metadata_files_read": sorted(documents),
                 "observed_paths": sorted(observed_present),
+                "warnings": metadata_warnings,
                 "source_code_bodies_read": 0,
             }
         )

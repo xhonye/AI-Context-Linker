@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add shallow project discovery across explicit workspace roots.
+- Keep discovered absolute paths confined to a private, reviewable configuration.
+- Reject cloud-synced config targets, directory links, reparse points, root escapes, and accidental overwrite.
+- Omit automatically derived absolute paths from summaries while continuing to fail closed on likely secrets.
+
 ## 0.2.0 - 2026-08-12
 
 - Add an allowlist-only local workspace scanner.

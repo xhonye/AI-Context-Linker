@@ -67,19 +67,30 @@ ChatGPT 能正确承认自己无法读取本地磁盘，但也因此不知道今
 
 ## 快速体验
 
+已有私有 workspace 配置时，可以直接从 `scan` 开始。第一次使用时，也可以先从一个或多个明确的工作区根目录发现候选项目：
+
 ```powershell
 git clone https://github.com/xhonye/AI-Context-Linker.git
 Set-Location AI-Context-Linker
 python -m pip install -e .
+
+python -m ai_context_linker discover `
+  --root "C:/Workspace" `
+  --root "C:/Workspace/Projects" `
+  --config-out "C:/Private/ai-context-linker/workspace.json"
+
+# 先删除误识别项目，并检查每个项目允许读取的元数据文件
 python -m ai_context_linker scan `
-  --config examples/synthetic-workspace-config.json `
-  --review-dir output/review
+  --config "C:/Private/ai-context-linker/workspace.json" `
+  --review-dir "C:/Private/ai-context-linker/review"
 
 # 审阅 candidate-manifest.json 和 scan-report.json 后再发布
 python -m ai_context_linker build `
-  --manifest output/review/candidate-manifest.json `
+  --manifest "C:/Private/ai-context-linker/review/candidate-manifest.json" `
   --output-dir output
 ```
+
+`discover` 只查看显式根目录的直属子目录、项目标志文件是否存在，不读取源码或元数据正文。它可能多给候选，但不会替你决定哪些项目应当发布。包含本机路径的 workspace 配置必须留在私有目录；只有最终 `build` 输出才适合放入专用 Drive Context 目录。
 
 然后将 `output/ai_context_linker.md` 放到一个只用于 AI Context Linker 的 Google Drive 目录。不要把源码目录、工作区根目录或私人数据目录加入同步范围。
 
@@ -91,8 +102,9 @@ python -m ai_context_linker build `
 - 已为自动采集事实生成类型化证据标签和快照哈希；
 - 已在发布前生成新增、删除、变化项目和关系预览。
 
-### V0.3 — 可追溯变化与项目图谱
+### V0.3 — 安全发现、可追溯变化与项目图谱
 
+- 从一个或多个显式工作区根目录生成私有项目候选配置；
 - 表达 decision、capability、document 和 open question；
 - 记录项目之间的支持、依赖、替代和阻塞关系；
 - 生成变化摘要、冲突检测和过期提醒。

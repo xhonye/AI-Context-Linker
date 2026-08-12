@@ -114,12 +114,17 @@ def _walk_strings(value: Any, label: str = "manifest") -> list[tuple[str, str]]:
 
 def _validate_safe_strings(manifest: dict[str, Any]) -> None:
     for label, text in _walk_strings(manifest):
-        for pattern in SECRET_PATTERNS:
-            if pattern.search(text):
-                raise ManifestError(f"{label} contains a likely secret")
-        for pattern in ABSOLUTE_PATH_PATTERNS:
-            if pattern.search(text):
-                raise ManifestError(f"{label} contains a machine-specific absolute path")
+        validate_publish_text(text, label)
+
+
+def validate_publish_text(text: str, label: str = "text") -> None:
+    """Reject text that must not enter a publishable context artifact."""
+    for pattern in SECRET_PATTERNS:
+        if pattern.search(text):
+            raise ManifestError(f"{label} contains a likely secret")
+    for pattern in ABSOLUTE_PATH_PATTERNS:
+        if pattern.search(text):
+            raise ManifestError(f"{label} contains a machine-specific absolute path")
 
 
 def _validate_string_list(value: Any, label: str) -> list[str]:

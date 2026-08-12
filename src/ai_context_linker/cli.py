@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from .core import ManifestError, build_bundle
+from .discovery import discover_workspace
 from .scanner import scan_workspace
 
 
@@ -14,6 +15,13 @@ def build_parser() -> argparse.ArgumentParser:
         description="Build a privacy-safe project briefing for ChatGPT.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+    discover = subparsers.add_parser(
+        "discover", help="create a private candidate workspace config from explicit directory roots"
+    )
+    discover.add_argument("--root", required=True, action="append", type=Path, help="root whose direct children may be projects; repeat for multiple roots")
+    discover.add_argument("--config-out", required=True, type=Path, help="private JSON configuration to create")
+    discover.add_argument("--workspace-name", default="Discovered workspace", help="human-readable workspace name")
+    discover.add_argument("--force", action="store_true", help="replace an existing config after reviewing the target")
     build = subparsers.add_parser("build", help="validate a manifest and build the stable context bundle")
     build.add_argument("--manifest", required=True, type=Path, help="approved JSON manifest")
     build.add_argument("--output-dir", required=True, type=Path, help="local or Drive-synced publish directory")
@@ -27,6 +35,16 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        if args.command == "discover":
+            result = discover_workspace(
+                args.root,
+                args.config_out,
+                workspace_name=args.workspace_name,
+                overwrite=args.force,
+            )
+            print(result.config.resolve())
+            print(f"Discovered {result.project_count} project candidate(s). Review the private config before scanning.")
+            return 0
         if args.command == "scan":
             paths = scan_workspace(args.config, args.review_dir, previous_manifest=args.previous_manifest)
             print(paths.candidate_manifest.resolve())

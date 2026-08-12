@@ -111,6 +111,22 @@ def test_scanner_fails_closed_when_allowlisted_metadata_contains_secret(tmp_path
         collect_candidate(config)
 
 
+def test_scanner_omits_unsafe_automatically_derived_summary(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "README.md").write_text(
+        "# Safe title\n\nRun from C:/Users/example/private/project before starting.\n",
+        encoding="utf-8",
+    )
+    config = write_config(tmp_path, project)
+
+    candidate, report = collect_candidate(config)
+
+    assert "C:/Users" not in json.dumps(candidate)
+    assert "no approved summary" in candidate["projects"][0]["summary"]
+    assert report["projects"][0]["warnings"]
+
+
 def test_scan_then_build_is_a_two_step_approval_flow(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()
