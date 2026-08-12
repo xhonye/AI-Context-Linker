@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+.venv/
+dist/
+build/
+*.egg-info/
+output/
+ai-context-linker.local.json
+task_plan.md
+findings.md
+progress.md

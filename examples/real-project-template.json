@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1",
+  "generated_at": "2026-08-11T12:00:00+08:00",
+  "workspace": {
+    "name": "Your workspace",
+    "summary": "Describe only the non-sensitive purpose of this project collection.",
+    "current_focus": "State the decision or project question you want AI to help explore.",
+    "decisions": ["Record only decisions you are comfortable sharing with the selected AI service."],
+    "unknowns": ["List material unknowns instead of asking AI to invent missing facts."]
+  },
+  "projects": [
+    {
+      "id": "example-project",
+      "name": "Example project",
+      "summary": "Explain the outcome without pasting source code or private data.",
+      "status": "active",
+      "signals": ["Add a confirmed, non-sensitive progress signal."],
+      "risks": ["Add a known risk."],
+      "open_questions": ["Add the next strategic question."],
+      "evidence": ["project-card:example-v1"]
+    }
+  ],
+  "relationships": []
+}

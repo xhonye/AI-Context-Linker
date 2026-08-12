@@ -1,0 +1,60 @@
+{
+  "schema_version": "0.1",
+  "generated_at": "2026-08-11T12:00:00+08:00",
+  "workspace": {
+    "name": "示例工作区",
+    "summary": "一个只包含合成项目事实的演示工作区，用于验证 AI Context Linker 的输出边界。",
+    "current_focus": "验证安全简报是否足以支持项目组合讨论。",
+    "decisions": [
+      "所有上传内容必须来自显式批准的清单。"
+    ],
+    "unknowns": [
+      "外部用户是否能仅凭简报准确理解项目边界。"
+    ]
+  },
+  "projects": [
+    {
+      "id": "collector",
+      "name": "事实采集器",
+      "summary": "从允许的数据源产生最小项目事实，不读取源码正文。",
+      "status": "prototype",
+      "signals": [
+        "已定义严格清单 schema。"
+      ],
+      "risks": [
+        "未经审查的文档摘要可能泄露本机信息。"
+      ],
+      "open_questions": [
+        "哪些文档字段可以安全自动提取？"
+      ],
+      "evidence": [
+        "project-card:collector-v1"
+      ]
+    },
+    {
+      "id": "publisher",
+      "name": "Drive 发布器",
+      "summary": "把批准后的稳定简报原子写入用户指定的同步目录。",
+      "status": "planned",
+      "signals": [],
+      "risks": [
+        "目标目录配置错误可能扩大同步面。"
+      ],
+      "open_questions": [
+        "是否需要保留历史快照？"
+      ],
+      "evidence": [
+        "project-card:publisher-v1"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "source": "collector",
+      "target": "publisher",
+      "type": "provides-approved-bundle",
+      "summary": "发布器只接收已经通过安全校验的简报。",
+      "evidence": "architecture-contract:v0.1"
+    }
+  ]
+}

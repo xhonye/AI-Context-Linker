@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Context Linker approved manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "workspace", "projects", "relationships"],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "generated_at": {"type": "string", "format": "date-time", "maxLength": 4000},
+    "workspace": {"$ref": "#/$defs/workspace"},
+    "projects": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/project"}},
+    "relationships": {"type": "array", "items": {"$ref": "#/$defs/relationship"}}
+  },
+  "$defs": {
+    "safeString": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "safeStringArray": {"type": "array", "items": {"$ref": "#/$defs/safeString"}},
+    "identifier": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"},
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "summary", "current_focus"],
+      "properties": {
+        "name": {"$ref": "#/$defs/safeString"},
+        "summary": {"$ref": "#/$defs/safeString"},
+        "current_focus": {"$ref": "#/$defs/safeString"},
+        "decisions": {"$ref": "#/$defs/safeStringArray"},
+        "unknowns": {"$ref": "#/$defs/safeStringArray"}
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "summary", "status"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "name": {"$ref": "#/$defs/safeString"},
+        "summary": {"$ref": "#/$defs/safeString"},
+        "status": {"$ref": "#/$defs/safeString"},
+        "signals": {"$ref": "#/$defs/safeStringArray"},
+        "risks": {"$ref": "#/$defs/safeStringArray"},
+        "open_questions": {"$ref": "#/$defs/safeStringArray"},
+        "evidence": {"$ref": "#/$defs/safeStringArray"}
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "target", "type", "summary", "evidence"],
+      "properties": {
+        "source": {"$ref": "#/$defs/identifier"},
+        "target": {"$ref": "#/$defs/identifier"},
+        "type": {"$ref": "#/$defs/identifier"},
+        "summary": {"$ref": "#/$defs/safeString"},
+        "evidence": {"$ref": "#/$defs/safeString"}
+      }
+    }
+  }
+}

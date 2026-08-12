@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-context-linker"
+version = "0.1.0"
+description = "Build a privacy-safe project briefing for ChatGPT from an explicitly approved manifest."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/xhonye/AI-Context-Linker"
+Repository = "https://github.com/xhonye/AI-Context-Linker.git"
+Issues = "https://github.com/xhonye/AI-Context-Linker/issues"
+
+[project.optional-dependencies]
+dev = ["jsonschema>=4.23", "pytest>=8"]
+
+[project.scripts]
+ai-context-linker = "ai_context_linker.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

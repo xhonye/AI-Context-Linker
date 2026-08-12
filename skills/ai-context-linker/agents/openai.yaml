@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Context Linker"
+  short_description: "Build privacy-safe project context bundles for AI"
+  default_prompt: "Use $ai-context-linker to build a reviewed context bundle for this project."
