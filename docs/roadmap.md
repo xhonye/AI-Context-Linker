@@ -1,5 +1,8 @@
 # 路线图
 
+`sol-context` 私有原型与当前开源内核的实测差距见
+[`prototype-migration-baseline.md`](prototype-migration-baseline.md)。
+
 ## V0.1 安全认知包
 
 - 人工批准 manifest；
