@@ -259,7 +259,11 @@ def derive_code_path_relationships(
                 if is_link_or_reparse(child):
                     continue
                 if child.is_dir():
-                    if depth < max_depth and child.name.casefold() not in EXCLUDED_WALK_DIRECTORIES:
+                    if (
+                        depth < max_depth
+                        and not child.name.startswith(".")
+                        and child.name.casefold() not in EXCLUDED_WALK_DIRECTORIES
+                    ):
                         resolved = child.resolve()
                         if resolved.is_relative_to(source_root):
                             queue.append((resolved, depth + 1))
@@ -290,6 +294,11 @@ def derive_code_path_relationships(
                             continue
                         start = normalized.find(needle)
                         if start < 0:
+                            continue
+                        if start > 0 and (
+                            normalized[start - 1].isalnum()
+                            or normalized[start - 1] in "._-"
+                        ):
                             continue
                         end = start + len(needle)
                         if end < len(normalized) and normalized[end] not in "/\\\"'` )]}:,":

@@ -88,6 +88,7 @@ def test_unknown_field_is_rejected_instead_of_uploaded() -> None:
     [
         ("api_key=sk-example0123456789012345", "likely secret"),
         ("See C:/Users/example/private/project.md", "absolute path"),
+        ("Do not write to D:/", "absolute path"),
         ("Read /home/example/private/project.md", "absolute path"),
     ],
 )

@@ -71,6 +71,40 @@ def test_code_path_relationship_scan_skips_sensitive_filenames(tmp_path: Path) -
     assert reports["source"]["source_code_bodies_read"] == 0
 
 
+def test_code_path_relationship_scan_skips_hidden_directories(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    hidden = source / ".agent-state"
+    source.mkdir()
+    target.mkdir()
+    hidden.mkdir()
+    (hidden / "config.py").write_text(f'TARGET = r"{target}"\n', encoding="utf-8")
+
+    relationships, reports = derive_code_path_relationships(
+        {"source": source, "target": target}, {"source"}
+    )
+
+    assert relationships == []
+    assert reports["source"]["source_code_bodies_read"] == 0
+
+
+def test_code_path_relationship_scan_requires_start_boundary(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    source.mkdir()
+    target.mkdir()
+    (source / "config.py").write_text(
+        f'TARGET = r"prefix{target}"\n', encoding="utf-8"
+    )
+
+    relationships, reports = derive_code_path_relationships(
+        {"source": source, "target": target}, {"source"}
+    )
+
+    assert relationships == []
+    assert reports["source"]["source_code_bodies_read"] == 1
+
+
 def test_pyproject_relationship_requires_unique_declared_identity(tmp_path: Path) -> None:
     source_file = tmp_path / "source.toml"
     source_file.write_text(

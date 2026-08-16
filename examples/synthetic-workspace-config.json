@@ -13,6 +13,8 @@
       "path": "synthetic-project",
       "allow_files": ["README.md"],
       "observe_paths": ["tests"],
+      "constraints": ["Only synthetic facts may be published."],
+      "code_relationship_scan": false,
       "risks": ["This is a synthetic fixture, not adoption evidence."],
       "open_questions": ["Which additional metadata adapters should be supported?"]
     }

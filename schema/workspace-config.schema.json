@@ -28,6 +28,8 @@
           "items": {"enum": ["pyproject.toml", "package.json", "Cargo.toml", "go.mod"]}
         },
         "observe_paths": {"type": "array", "items": {"$ref": "#/$defs/relativePath"}},
+        "constraints": {"$ref": "context-manifest.schema.json#/$defs/safeStringArray"},
+        "code_relationship_scan": {"type": "boolean", "default": false},
         "risks": {"$ref": "context-manifest.schema.json#/$defs/safeStringArray"},
         "open_questions": {"$ref": "context-manifest.schema.json#/$defs/safeStringArray"}
       }
