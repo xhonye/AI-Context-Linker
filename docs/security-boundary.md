@@ -40,6 +40,7 @@ ChatGPT 的 Google Drive 集成会访问或索引用户授权范围内的内容�
 - Git 信号只记录分支、变更路径数和最新提交时间，不读 diff，不把活跃度当成价值。
 - 候选 manifest 和扫描报告不包含项目根路径；发布仍是独立的第二步。
 - `facts_sha256` 在 build 时会重新计算；审阅后内容被修改但哈希未更新时会失败关闭。
+- `snapshot_changes.changes_sha256` 独立绑定比较视图；`facts_sha256` 不包含该视图，避免仅更换上一份基线就改变同一事实快照的身份。
 - README、AGENTS 等自然语言仍属于不可信输入；工具不会声称自动识别所有隐私或提示词注入，真实候选 manifest 必须人工审阅。
 - `review_dir` 显示命中常见 Google Drive、OneDrive、Dropbox 或 iCloud 目录名时会被拒绝，避免未审阅候选文件先行同步；这是防误操作护栏，不是通用云盘检测。
 - `discover` 只枚举用户显式指定根目录的直属子目录和项目标志存在性；包含绝对路径的候选配置属于私有输入。目录链接、Windows reparse point、解析后越出根目录的候选以及常见生成目录会被排除。
@@ -47,4 +48,7 @@ ChatGPT 的 Google Drive 集成会访问或索引用户授权范围内的内容�
 - 文件名清单适配器有目录剪枝、深度与条目上限；只发布固定入口文件名、测试数量和是否截断，不发布任意文件名。Git 变更只发布粗粒度分类数量，不发布具体路径。
 - 手工 workspace 配置不能绕过目录边界：项目根与 `.git` 的 symlink 或 Windows reparse point 会被拒绝或跳过。
 - 开放事项只来自已批准的根目录 README、AGENTS、CLAUDE、ROADMAP、TODO、STATUS、CHANGELOG 或 PROJECT_CHARTER 中的 Markdown 未完成复选项，最多 5 条并经过发布安全校验；源码 TODO、内部 `task_plan.md`/`progress.md`、任意任务数据库和私人运行记录不属于默认采集面。
+- 项目约束只来自已批准的 AGENTS、CLAUDE 或 PROJECT_CHARTER 中标题明确为边界、合同、原则、安全、非目标或存储的小节，最多 8 条；其他工作流指令不进入约束字段，所有条目仍经过 secret 与绝对路径拦截。
 - 依赖关系只解析经审阅的固定根目录依赖清单，且只在目标包身份唯一时成立；文档引用只认 Markdown 代码标记或链接，并过滤普通正文和重复模板。二者都不读取或发布源码正文，文档引用不会升级成依赖证明。
+- 可选 `code_relationship_scan` 默认关闭，必须在每个私有项目配置中显式开启。它只扫描固定代码/配置扩展名，受深度、条目数、文件数和 256 KiB 文件大小上限约束，并跳过测试、fixture、敏感文件名、依赖、生成目录、symlink 与 reparse point。输出只含项目 ID 和相对文件行号，不含源码行、secret 或绝对根路径；扫描报告必须披露读取文件数与截断状态。
+- `slice` 只读取已通过上述校验的 manifest；问题文本限制为 500 字符并再次执行 secret 与绝对路径拦截。它不调用模型，不把问题或选择规则写回事实层。

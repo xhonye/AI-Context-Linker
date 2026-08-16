@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from ai_context_linker.core import ManifestError, build_bundle, validate_manifest
+from ai_context_linker.core import (
+    ManifestError,
+    build_bundle,
+    facts_sha256,
+    snapshot_changes_sha256,
+    validate_manifest,
+)
 
 
 def valid_manifest() -> dict:
@@ -101,6 +107,18 @@ def test_relationship_must_reference_known_projects() -> None:
         validate_manifest(manifest)
 
 
+def test_optional_constraints_are_validated_and_rendered(tmp_path: Path) -> None:
+    manifest = valid_manifest()
+    manifest["projects"][0]["constraints"] = ["Only approved facts may be published."]
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+
+    paths = build_bundle(manifest_path, tmp_path / "publish")
+
+    assert "### 已确认约束" in paths.markdown.read_text(encoding="utf-8")
+    assert "Only approved facts may be published." in paths.markdown.read_text(encoding="utf-8")
+
+
 def test_relationship_type_cannot_inject_markup() -> None:
     manifest = valid_manifest()
     manifest["relationships"][0]["type"] = "feeds--> `unknown`"
@@ -112,6 +130,84 @@ def test_relationship_type_cannot_inject_markup() -> None:
 def test_fact_hash_must_match_manifest_content() -> None:
     manifest = valid_manifest()
     manifest["facts_sha256"] = "0" * 64
+
+    with pytest.raises(ManifestError, match="does not match"):
+        validate_manifest(manifest)
+
+
+def test_snapshot_changes_are_validated_hashed_and_rendered(tmp_path: Path) -> None:
+    manifest = valid_manifest()
+    manifest["snapshot_changes"] = {
+        "baseline_available": True,
+        "previous_facts_sha256": "1" * 64,
+        "added_projects": [],
+        "removed_projects": ["legacy"],
+        "changed_projects": [{"id": "alpha", "fields": ["signals", "status"]}],
+        "workspace_changed": False,
+        "relationships_changed": True,
+    }
+    manifest["snapshot_changes"]["changes_sha256"] = snapshot_changes_sha256(manifest["snapshot_changes"])
+    manifest["facts_sha256"] = facts_sha256(manifest)
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+
+    paths = build_bundle(manifest_path, tmp_path / "publish")
+    markdown = paths.markdown.read_text(encoding="utf-8")
+
+    assert "## 与上次批准快照相比" in markdown
+    assert "移除项目：legacy" in markdown
+    assert "`alpha` 变化字段：signals, status" in markdown
+
+
+def test_snapshot_changes_reject_unknown_project_field() -> None:
+    manifest = valid_manifest()
+    manifest["snapshot_changes"] = {
+        "baseline_available": True,
+        "previous_facts_sha256": None,
+        "added_projects": [],
+        "removed_projects": [],
+        "changed_projects": [{"id": "alpha", "fields": ["source_code"]}],
+        "workspace_changed": False,
+        "relationships_changed": False,
+    }
+    manifest["snapshot_changes"]["changes_sha256"] = snapshot_changes_sha256(manifest["snapshot_changes"])
+
+    with pytest.raises(ManifestError, match="unsupported fields"):
+        validate_manifest(manifest)
+
+
+def test_fact_hash_excludes_independently_hashed_change_view() -> None:
+    manifest = valid_manifest()
+    before = facts_sha256(manifest)
+    changes = {
+        "baseline_available": False,
+        "previous_facts_sha256": None,
+        "added_projects": ["alpha", "beta"],
+        "removed_projects": [],
+        "changed_projects": [],
+        "workspace_changed": True,
+        "relationships_changed": True,
+    }
+    changes["changes_sha256"] = snapshot_changes_sha256(changes)
+    manifest["snapshot_changes"] = changes
+
+    assert facts_sha256(manifest) == before
+
+
+def test_tampered_snapshot_change_view_is_rejected() -> None:
+    manifest = valid_manifest()
+    changes = {
+        "baseline_available": True,
+        "previous_facts_sha256": "1" * 64,
+        "added_projects": [],
+        "removed_projects": [],
+        "changed_projects": [],
+        "workspace_changed": False,
+        "relationships_changed": False,
+    }
+    changes["changes_sha256"] = snapshot_changes_sha256(changes)
+    changes["relationships_changed"] = True
+    manifest["snapshot_changes"] = changes
 
     with pytest.raises(ManifestError, match="does not match"):
         validate_manifest(manifest)

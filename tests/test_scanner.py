@@ -209,6 +209,10 @@ def test_scanner_extracts_bounded_open_items_from_approved_metadata_only(tmp_pat
     assert "Completed work" not in rendered
     assert "must never be read" not in rendered
     assert "sample:file:README.md:line-5" in rendered
+    assert candidate["projects"][0]["open_questions"] == [
+        "Approved metadata open item from `README.md`: Ship the reviewed workflow"
+    ]
+    assert not any("Ship the reviewed workflow" in signal for signal in candidate["projects"][0]["signals"])
     assert report["projects"][0]["metadata_open_item_count"] == 1
 
 
@@ -226,6 +230,35 @@ def test_scanner_omits_absolute_path_from_metadata_open_item(tmp_path: Path) -> 
     assert "C:/Users" not in json.dumps(candidate)
     assert report["projects"][0]["metadata_open_item_count"] == 0
     assert report["projects"][0]["warnings"]
+
+
+def test_scanner_extracts_only_bounded_constraints_from_approved_sections(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "AGENTS.md").write_text(
+        "# Agent contract\n\n## Product boundary\n\n- Never publish source code.\n"
+        "- Keep facts and inference separate.\n\n## Workflow\n\n- Run an internal deployment command.\n",
+        encoding="utf-8",
+    )
+    config = write_config(tmp_path, project, allow_files=["AGENTS.md"])
+
+    candidate, _ = collect_candidate(config)
+
+    assert candidate["projects"][0]["constraints"] == [
+        "Never publish source code.",
+        "Keep facts and inference separate.",
+    ]
+    assert "internal deployment" not in json.dumps(candidate)
+
+
+def test_code_relationship_scan_flag_must_be_boolean(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "README.md").write_text("# Safe\n\nSafe summary.\n", encoding="utf-8")
+    config = write_config(tmp_path, project, code_relationship_scan="yes")
+
+    with pytest.raises(ManifestError, match="must be a boolean"):
+        collect_candidate(config)
 
 
 def test_scan_then_build_is_a_two_step_approval_flow(tmp_path: Path) -> None:
@@ -331,11 +364,15 @@ def test_scan_report_compares_with_previous_approved_manifest(tmp_path: Path) ->
         observed_at="2026-08-12T13:00:00+08:00",
     )
     report = json.loads(second.report.read_text(encoding="utf-8"))
+    candidate = json.loads(second.candidate_manifest.read_text(encoding="utf-8"))
 
     assert report["changes"]["baseline_available"] is True
     assert report["changes"]["changed"] is True
     assert report["changes"]["changed_projects"] == ["sample"]
+    assert report["changes"]["changed_project_fields"]["sample"] == ["summary"]
     assert report["previous_facts_sha256"]
+    assert candidate["snapshot_changes"]["changed_projects"] == [{"id": "sample", "fields": ["summary"]}]
+    assert candidate["snapshot_changes"]["previous_facts_sha256"] == report["previous_facts_sha256"]
 
 
 def test_build_rejects_candidate_changed_after_hashing(tmp_path: Path) -> None:

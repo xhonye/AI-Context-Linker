@@ -12,6 +12,10 @@
 - Extract at most five open checklist items from approved metadata with relative line evidence; source TODO comments remain unread.
 - Derive graded declared-dependency and document-reference edges from reviewed structured metadata.
 - Suppress generic project IDs, ambiguous package identities, ordinary prose matches, and repeated template references.
+- Bind snapshot changes with an independent hash while keeping the fact hash stable across comparison baselines.
+- Add deterministic question-directed briefings for priority, change, relationship, overview, and named-project discussions.
+- Extract bounded project constraints from explicitly approved contract sections without reading source bodies.
+- Add an explicit opt-in code-path relationship adapter with bounded local reads and no source-text or absolute-root publication.
 
 ## 0.2.0 - 2026-08-12
 

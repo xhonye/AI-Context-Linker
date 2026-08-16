@@ -104,3 +104,56 @@ V0.2 completed this first migration slice and moved estimated automation from
 about **35% to 75–80%** without giving a model authority over the fact layer.
 Automatic relationship discovery remains deferred until it can preserve the
 same evidence and review guarantees.
+
+## 2026-08-16 safe replacement audit
+
+The migration was evaluated against a refreshed 29-project prototype snapshot
+and an older Linker snapshot. Aggregate results are recorded here; private
+project names, roots, source lines, and runtime data are intentionally omitted.
+
+The core-fact recall rubric counts project identity, approved summary, Git
+presence/state, conventional entry points, test-file presence, actionable open
+items, approved contract constraints, strong cross-project dependencies, and
+snapshot change semantics. It excludes weaker document-reference edges and
+shared-dataset inferences because those are derived navigation views rather
+than confirmed project facts.
+
+| Core fact family | Linker / prototype baseline |
+|---|---:|
+| Project identity | 29 / 29 |
+| Approved project summary | 27 / 28 |
+| Git facts | 27 / 27 |
+| Conventional entry points | 7 / 7 |
+| Test-file presence | 18 / 18 |
+| Actionable open items | 0 / 1 |
+| Approved contract constraints | 17 / 26 |
+| Strong cross-project dependencies | 4 / 4 |
+| Snapshot change semantics | 1 / 1 |
+| **Total** | **130 / 141 (92.2%)** |
+
+The missing open item is a source-code TODO. Linker deliberately does not
+publish source TODO text. Constraint recall is lower because Linker only accepts
+bullets under explicitly relevant contract headings instead of copying broad
+agent instructions into the cloud context.
+
+An explicit opt-in code-path audit inspected 6,004 bounded local code/config
+files across the approved set and produced 24 candidate strong edges. Three
+projects reached a scan bound and were reported as truncated. The generated
+bundle contained zero source lines, zero local absolute paths, and zero common
+secret-pattern hits. Default scans still read zero source-code bodies.
+
+Four fixed discussion questions were then checked:
+
+| Question | Result |
+|---|---|
+| What should I advance today? | No material loss: all projects retain summaries, Git/activity facts, constraints where approved, and an explicit ban on treating activity as value. Priority remains an AI inference. |
+| What is the next step for every project? | Comparable limitation: each snapshot has explicit actionable items for only one project. Linker preserves unknowns instead of inventing 28 project plans. |
+| Which projects overlap or may be merged? | No material loss for evidence-backed dependencies: all four prototype strong edges are recovered, with additional reviewable candidates. Shared-dataset inference remains intentionally omitted. |
+| What facts changed recently? | Improved: the change view has its own hash, records added/removed projects and changed fields, and cannot change the identity of the underlying fact snapshot. |
+
+For the ChatGPT/Drive strategic-discussion use case, Linker now passes the
+replacement gate. The prototype should be retained temporarily as a rollback
+and audit reference, not deleted or used as a runtime dependency. Estimated
+automation is now about **90% from explicit workspace roots to a reviewed
+bundle**, and **100% from an approved manifest to full or question-directed
+output**. Required model-generated preparation remains **0%**.

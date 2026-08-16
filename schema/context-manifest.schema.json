@@ -10,7 +10,8 @@
     "facts_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "workspace": {"$ref": "#/$defs/workspace"},
     "projects": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/project"}},
-    "relationships": {"type": "array", "items": {"$ref": "#/$defs/relationship"}}
+    "relationships": {"type": "array", "items": {"$ref": "#/$defs/relationship"}},
+    "snapshot_changes": {"$ref": "#/$defs/snapshotChanges"}
   },
   "$defs": {
     "safeString": {"type": "string", "minLength": 1, "maxLength": 4000},
@@ -38,6 +39,7 @@
         "summary": {"$ref": "#/$defs/safeString"},
         "status": {"$ref": "#/$defs/safeString"},
         "signals": {"$ref": "#/$defs/safeStringArray"},
+        "constraints": {"$ref": "#/$defs/safeStringArray"},
         "risks": {"$ref": "#/$defs/safeStringArray"},
         "open_questions": {"$ref": "#/$defs/safeStringArray"},
         "evidence": {"$ref": "#/$defs/safeStringArray"}
@@ -53,6 +55,35 @@
         "type": {"$ref": "#/$defs/identifier"},
         "summary": {"$ref": "#/$defs/safeString"},
         "evidence": {"$ref": "#/$defs/safeString"}
+      }
+    },
+    "snapshotChanges": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changes_sha256", "baseline_available", "added_projects", "removed_projects", "changed_projects", "workspace_changed", "relationships_changed"],
+      "properties": {
+        "changes_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "baseline_available": {"type": "boolean"},
+        "previous_facts_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "added_projects": {"type": "array", "items": {"$ref": "#/$defs/identifier"}},
+        "removed_projects": {"type": "array", "items": {"$ref": "#/$defs/identifier"}},
+        "changed_projects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "fields"],
+            "properties": {
+              "id": {"$ref": "#/$defs/identifier"},
+              "fields": {
+                "type": "array",
+                "items": {"enum": ["name", "summary", "status", "signals", "constraints", "risks", "open_questions", "evidence"]}
+              }
+            }
+          }
+        },
+        "workspace_changed": {"type": "boolean"},
+        "relationships_changed": {"type": "boolean"}
       }
     }
   }

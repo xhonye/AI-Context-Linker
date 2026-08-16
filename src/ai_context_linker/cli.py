@@ -7,6 +7,7 @@ from pathlib import Path
 from .core import ManifestError, build_bundle
 from .discovery import discover_workspace
 from .scanner import scan_workspace
+from .slicing import build_question_context
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -29,6 +30,12 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--config", required=True, type=Path, help="private workspace configuration")
     scan.add_argument("--review-dir", required=True, type=Path, help="private directory for review artifacts")
     scan.add_argument("--previous-manifest", type=Path, help="previous approved manifest used for change review")
+    question_slice = subparsers.add_parser(
+        "slice", help="build a compact question-directed briefing from an approved manifest"
+    )
+    question_slice.add_argument("--manifest", required=True, type=Path, help="approved JSON manifest")
+    question_slice.add_argument("--question", required=True, help="current project discussion question")
+    question_slice.add_argument("--output-dir", required=True, type=Path, help="directory for the compact briefing")
     return parser
 
 
@@ -50,6 +57,10 @@ def main(argv: list[str] | None = None) -> int:
             print(paths.candidate_manifest.resolve())
             print(paths.report.resolve())
             print("Review the candidate manifest, then run `ai-context-linker build` to approve and publish it.")
+            return 0
+        if args.command == "slice":
+            paths = build_question_context(args.manifest, args.question, args.output_dir)
+            print(paths.markdown.resolve())
             return 0
         paths = build_bundle(args.manifest, args.output_dir)
     except (ManifestError, OSError) as exc:

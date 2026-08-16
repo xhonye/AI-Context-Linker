@@ -16,7 +16,7 @@ Use the standalone `ai-context-linker` CLI as the execution truth. Keep this Ski
 ai-context-linker scan --config <private-workspace.json> --review-dir <private-review-directory> [--previous-manifest <approved.json>]
 ```
 
-3. Confirm the scan report says `source_code_bodies_read: 0`. Review the candidate manifest and its change summary. Refuse source code, diffs, credentials, connection strings, private runtime data, or unconfirmed model inference.
+3. Confirm the scan report says `source_code_bodies_read: 0` unless the user explicitly enabled per-project `code_relationship_scan`. For an opt-in scan, report the bounded read count and review every derived code-path relationship; never publish source lines or absolute roots. Review the candidate manifest and its change summary. Refuse source code, diffs, credentials, connection strings, private runtime data, or unconfirmed model inference.
 4. Require the user to approve the candidate before writing to a cloud-synced destination. Keep facts, unknowns, and derived relationships distinct.
 5. Require an explicit output directory. Never select a workspace root, repository root, home directory, or broad Drive directory.
 6. Run:
@@ -26,6 +26,14 @@ ai-context-linker build --manifest <approved.json> --output-dir <explicit-direct
 ```
 
 7. Report the candidate/report paths, the two generated files, the fact hash and any validation failure. Do not bypass a failure or weaken a filter.
+
+For a specific discussion question, optionally generate a compact derivative after approval:
+
+```text
+ai-context-linker slice --manifest <approved.json> --question <question> --output-dir <explicit-directory>
+```
+
+Treat the slice as deterministic selection from the approved facts, not as an AI conclusion. Report its single Markdown path separately from the full bundle.
 
 ## Missing CLI
 

@@ -1,13 +1,74 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from ai_context_linker.relationships import (
+    derive_code_path_relationships,
     derive_dependency_relationships,
     derive_document_relationships,
     parse_dependency_metadata,
     repeated_reference_fragments,
 )
+
+
+def test_code_path_relationships_are_opt_in_bounded_and_do_not_publish_source(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    source.mkdir()
+    target.mkdir()
+    (source / "config.py").write_text(
+        f'TARGET = r"{target}"\napi_key = "sk-example0123456789012345"\n',
+        encoding="utf-8",
+    )
+
+    relationships, reports = derive_code_path_relationships(
+        {"source": source, "target": target}, {"source"}
+    )
+    rendered = json.dumps(relationships)
+
+    assert relationships == [
+        {
+            "source": "source",
+            "target": "target",
+            "type": "code-path-dependency",
+            "summary": "Allowlisted local code/config references the approved root of `target`.",
+            "evidence": "source:code-path:config.py:line-1",
+        }
+    ]
+    assert str(target) not in rendered
+    assert "sk-example" not in rendered
+    assert reports["source"]["source_code_bodies_read"] == 1
+
+
+def test_code_path_relationship_scan_reports_file_limit(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    source.mkdir()
+    target.mkdir()
+    (source / "a.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+    _, reports = derive_code_path_relationships(
+        {"source": source, "target": target}, {"source"}, max_files=1
+    )
+
+    assert reports["source"]["source_code_bodies_read"] == 1
+    assert reports["source"]["truncated"] is True
+
+
+def test_code_path_relationship_scan_skips_sensitive_filenames(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    source.mkdir()
+    target.mkdir()
+    (source / "credentials.py").write_text(f'TARGET = r"{target}"\n', encoding="utf-8")
+
+    relationships, reports = derive_code_path_relationships(
+        {"source": source, "target": target}, {"source"}
+    )
+
+    assert relationships == []
+    assert reports["source"]["source_code_bodies_read"] == 0
 
 
 def test_pyproject_relationship_requires_unique_declared_identity(tmp_path: Path) -> None:

@@ -18,5 +18,8 @@
 ## Drive 交付
 
 - 稳定入口：`ai_context_linker.md`，适合链接到 ChatGPT Project 或按需检索。
+- 问题入口：`ai_context_linker.question.md`，由 `slice` 从同一批准事实快照确定性裁剪，适合只聊当前问题。
 - 连续索引：将专用发布目录纳入 ChatGPT Google Drive app 的同步范围。
 - 机器可读附件：`ai_context_linker.graph.json`，用于未来图谱浏览和差异计算；普通聊天优先读取 Markdown。
+
+`slice` 的选择模式只是确定性检索规则，不是 AI 判断。项目优先级、合并建议和下一步仍由 ChatGPT 在事实之后提出，并标为推断。

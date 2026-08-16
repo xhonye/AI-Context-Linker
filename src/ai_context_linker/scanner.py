@@ -1,8 +1,9 @@
 """Deterministic, allowlist-only local workspace scanner.
 
 The scanner produces a candidate manifest for human review. It never publishes
-the bundle and never reads source-code bodies. Local paths remain confined to
-the private scanner configuration.
+the bundle. Source-code bodies are unread by default; an explicit per-project
+relationship adapter may inspect bounded files without publishing their text.
+Local paths remain confined to the private scanner configuration.
 """
 
 from __future__ import annotations
@@ -21,11 +22,13 @@ from .core import (
     _atomic_write_text,
     facts_sha256,
     load_manifest,
+    snapshot_changes_sha256,
     validate_manifest,
     validate_publish_text,
 )
 from .relationships import (
     DEPENDENCY_METADATA_FILENAMES,
+    derive_code_path_relationships,
     derive_dependency_relationships,
     derive_document_relationships,
     parse_dependency_metadata,
@@ -44,6 +47,8 @@ CONFIG_PROJECT_KEYS = {
     "dependency_files",
     "observe_paths",
     "risks",
+    "constraints",
+    "code_relationship_scan",
     "open_questions",
 }
 WORKSPACE_KEYS = {"name", "summary", "current_focus", "decisions", "unknowns"}
@@ -72,6 +77,7 @@ ALLOWED_METADATA_NAMES = {
 }
 MAX_METADATA_BYTES = 64 * 1024
 MAX_METADATA_OPEN_ITEMS = 5
+MAX_METADATA_CONSTRAINTS = 8
 FORBIDDEN_OBSERVED_PARTS = {".git", ".ssh"}
 FORBIDDEN_OBSERVED_MARKERS = {"credential", "secret", "token"}
 FORBIDDEN_OBSERVED_SUFFIXES = {".db", ".key", ".p12", ".pem", ".sqlite", ".sqlite3"}
@@ -112,6 +118,14 @@ def _keys(value: dict[str, Any], allowed: set[str], label: str) -> None:
 
 def _strings(value: Any, label: str) -> list[str]:
     return [str(_string(item, f"{label}[{index}]")) for index, item in enumerate(_list(value, label))]
+
+
+def _boolean(value: Any, label: str, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if not isinstance(value, bool):
+        raise ManifestError(f"{label} must be a boolean")
+    return value
 
 
 def _safe_relative_path(raw: str, label: str) -> Path:
@@ -224,6 +238,51 @@ def _markdown_open_items(text: str) -> list[tuple[str, int]]:
         if len(items) >= MAX_METADATA_OPEN_ITEMS:
             break
     return items
+
+
+def _markdown_constraints(text: str) -> list[tuple[str, int]]:
+    heading_terms = (
+        "boundary",
+        "contract",
+        "principle",
+        "security",
+        "safety",
+        "non-goal",
+        "storage",
+        "约束",
+        "原则",
+        "边界",
+        "合同",
+        "安全",
+        "非目标",
+        "存储",
+    )
+    constraints: list[tuple[str, int]] = []
+    in_selected_section = False
+    in_fence = False
+    for line_number, raw_line in enumerate(text.splitlines(), start=1):
+        stripped = raw_line.strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if stripped.startswith("#"):
+            heading = stripped.lstrip("#").strip().casefold()
+            in_selected_section = any(term in heading for term in heading_terms)
+            continue
+        if not in_selected_section:
+            continue
+        match = re.match(r"^[-*+]\s+(.+)$", stripped)
+        if not match:
+            continue
+        item = re.sub(r"\[([^]]+)\]\([^)]*\)", r"\1", match.group(1))
+        item = re.sub(r"[`*_]", "", item).strip()
+        if item:
+            constraints.append((item[:400], line_number))
+        if len(constraints) >= MAX_METADATA_CONSTRAINTS:
+            break
+    return constraints
 
 
 def _safe_derived_text(text: str | None, fallback: str, label: str, warnings: list[str]) -> str:
@@ -347,6 +406,8 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
     projects: list[dict[str, Any]] = []
     report_projects: list[dict[str, Any]] = []
     relationship_inputs: dict[str, dict[str, Any]] = {}
+    project_roots: dict[str, Path] = {}
+    code_relationship_projects: set[str] = set()
     for index, raw_project in enumerate(_list(config.get("projects"), "projects")):
         project = _mapping(raw_project, f"projects[{index}]")
         _keys(project, CONFIG_PROJECT_KEYS, f"projects[{index}]")
@@ -359,6 +420,9 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         root = (path.parent / root_candidate).resolve() if not root_candidate.is_absolute() else root_candidate.resolve()
         if not root.is_dir():
             raise ManifestError(f"projects[{index}].path is not an existing directory")
+        project_roots[project_id] = root
+        if _boolean(project.get("code_relationship_scan"), f"projects[{index}].code_relationship_scan"):
+            code_relationship_projects.add(project_id)
 
         allow_files = _strings(project.get("allow_files", list(DEFAULT_ALLOW_FILES)), f"projects[{index}].allow_files")
         dependency_files = _strings(project.get("dependency_files", []), f"projects[{index}].dependency_files")
@@ -441,6 +505,27 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
             f"projects[{index}].derived_summary",
             metadata_warnings,
         )
+        open_questions = _strings(project.get("open_questions", []), f"projects[{index}].open_questions")
+        constraints = _strings(project.get("constraints", []), f"projects[{index}].constraints")
+        for relative_name in ("AGENTS.md", "CLAUDE.md", "PROJECT_CHARTER.md"):
+            document = documents.get(relative_name)
+            if not document:
+                continue
+            for item, line_number in _markdown_constraints(document):
+                safe_item = _safe_derived_text(
+                    item,
+                    "",
+                    f"projects[{index}].metadata_constraint",
+                    metadata_warnings,
+                )
+                if not safe_item or safe_item in constraints:
+                    continue
+                constraints.append(safe_item)
+                evidence.append(f"{project_id}:file:{relative_name}:line-{line_number}")
+                if len(constraints) >= MAX_METADATA_CONSTRAINTS:
+                    break
+            if len(constraints) >= MAX_METADATA_CONSTRAINTS:
+                break
         open_items_added = 0
         for relative_name, document in sorted(documents.items()):
             for item, line_number in _markdown_open_items(document):
@@ -452,7 +537,9 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
                 )
                 if not safe_item:
                     continue
-                signals.append(f"Approved metadata open item from `{relative_name}`: {safe_item}")
+                derived_question = f"Approved metadata open item from `{relative_name}`: {safe_item}"
+                if derived_question not in open_questions:
+                    open_questions.append(derived_question)
                 evidence.append(f"{project_id}:file:{relative_name}:line-{line_number}")
                 open_items_added += 1
                 if open_items_added >= MAX_METADATA_OPEN_ITEMS:
@@ -469,10 +556,9 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
                 "summary": summary,
                 "status": status,
                 "signals": signals,
+                "constraints": constraints,
                 "risks": _strings(project.get("risks", []), f"projects[{index}].risks"),
-                "open_questions": _strings(
-                    project.get("open_questions", []), f"projects[{index}].open_questions"
-                ),
+                "open_questions": open_questions,
                 "evidence": evidence,
             }
         )
@@ -504,6 +590,14 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
 
     configured_relationship_count = len(relationships)
     derived_dependencies = derive_dependency_relationships(relationship_inputs)
+    derived_code_paths, code_path_reports = derive_code_path_relationships(
+        project_roots, code_relationship_projects
+    )
+    for project_report in report_projects:
+        code_report = code_path_reports.get(project_report["id"])
+        if code_report:
+            project_report["code_relationship_scan"] = code_report
+            project_report["source_code_bodies_read"] = code_report["source_code_bodies_read"]
     project_ids = set(relationship_inputs)
     repeated_fragments = repeated_reference_fragments(
         {project_id: inputs["documents"] for project_id, inputs in relationship_inputs.items()},
@@ -520,7 +614,7 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         )
     ]
     seen_relationships = {(item["source"], item["target"], item["type"]) for item in relationships}
-    for relationship in [*derived_dependencies, *derived_documents]:
+    for relationship in [*derived_dependencies, *derived_code_paths, *derived_documents]:
         key = (relationship["source"], relationship["target"], relationship["type"])
         if key not in seen_relationships:
             relationships.append(relationship)
@@ -544,10 +638,13 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         "project_count": len(projects),
         "requires_human_approval": True,
         "untrusted_metadata_requires_review": True,
-        "source_code_bodies_read": 0,
+        "source_code_bodies_read": sum(
+            int(item.get("source_code_bodies_read", 0)) for item in code_path_reports.values()
+        ),
         "relationships": {
             "configured": configured_relationship_count,
             "declared_dependency": len(derived_dependencies),
+            "code_path_dependency": len(derived_code_paths),
             "document_reference": len(derived_documents),
             "repeated_reference_fragments_ignored": len(repeated_fragments),
         },
@@ -564,6 +661,7 @@ def _change_summary(candidate: dict[str, Any], previous: dict[str, Any] | None) 
             "added_projects": sorted(project["id"] for project in candidate["projects"]),
             "removed_projects": [],
             "changed_projects": [],
+            "changed_project_fields": {},
             "workspace_changed": True,
             "relationships_changed": bool(candidate["relationships"]),
         }
@@ -576,6 +674,14 @@ def _change_summary(candidate: dict[str, Any], previous: dict[str, Any] | None) 
         for project_id in set(current_projects) & set(previous_projects)
         if current_projects[project_id] != previous_projects[project_id]
     )
+    changed_project_fields = {
+        project_id: sorted(
+            key
+            for key in set(current_projects[project_id]) | set(previous_projects[project_id])
+            if key != "id" and current_projects[project_id].get(key) != previous_projects[project_id].get(key)
+        )
+        for project_id in changed_projects
+    }
     workspace_changed = candidate["workspace"] != previous["workspace"]
     relationships_changed = candidate["relationships"] != previous["relationships"]
     return {
@@ -584,6 +690,7 @@ def _change_summary(candidate: dict[str, Any], previous: dict[str, Any] | None) 
         "added_projects": added,
         "removed_projects": removed,
         "changed_projects": changed_projects,
+        "changed_project_fields": changed_project_fields,
         "workspace_changed": workspace_changed,
         "relationships_changed": relationships_changed,
     }
@@ -600,6 +707,26 @@ def scan_workspace(
     previous = load_manifest(previous_manifest) if previous_manifest is not None else None
     report["changes"] = _change_summary(candidate, previous)
     report["previous_facts_sha256"] = previous.get("facts_sha256") if previous else None
+    changes = report["changes"]
+    snapshot_changes = {
+        "baseline_available": changes["baseline_available"],
+        "previous_facts_sha256": report["previous_facts_sha256"],
+        "added_projects": changes["added_projects"],
+        "removed_projects": changes["removed_projects"],
+        "changed_projects": [
+            {"id": project_id, "fields": changes["changed_project_fields"].get(project_id, [])}
+            for project_id in changes["changed_projects"]
+        ],
+        "workspace_changed": changes["workspace_changed"],
+        "relationships_changed": changes["relationships_changed"],
+    }
+    snapshot_changes["changes_sha256"] = snapshot_changes_sha256(snapshot_changes)
+    candidate["snapshot_changes"] = snapshot_changes
+    candidate.pop("facts_sha256", None)
+    candidate = validate_manifest(candidate)
+    candidate["facts_sha256"] = facts_sha256(candidate)
+    candidate = validate_manifest(candidate)
+    report["facts_sha256"] = candidate["facts_sha256"]
     destination = Path(review_dir).resolve()
     if any(marker in part.lower() for part in destination.parts for marker in SYNC_DIRECTORY_MARKERS):
         raise ManifestError("review_dir appears to be cloud-synced; review artifacts must stay private until build")

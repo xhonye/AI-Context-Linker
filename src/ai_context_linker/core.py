@@ -2,8 +2,9 @@
 
 The publisher accepts only a small, explicitly approved manifest and fails
 closed when the payload contains an unknown field, a likely secret, or a
-machine-specific absolute path. The optional V0.2 scanner reads only explicitly
-allowlisted metadata and never reads source-code bodies.
+machine-specific absolute path. The optional scanner reads approved metadata by
+default; a separately enabled relationship adapter may inspect bounded local
+code/config files but cannot publish their text or absolute roots.
 """
 
 from __future__ import annotations
@@ -20,7 +21,15 @@ from typing import Any
 
 SCHEMA_VERSION = "0.1"
 
-ROOT_KEYS = {"schema_version", "generated_at", "facts_sha256", "workspace", "projects", "relationships"}
+ROOT_KEYS = {
+    "schema_version",
+    "generated_at",
+    "facts_sha256",
+    "workspace",
+    "projects",
+    "relationships",
+    "snapshot_changes",
+}
 WORKSPACE_KEYS = {"name", "summary", "current_focus", "decisions", "unknowns"}
 PROJECT_KEYS = {
     "id",
@@ -28,11 +37,23 @@ PROJECT_KEYS = {
     "summary",
     "status",
     "signals",
+    "constraints",
     "risks",
     "open_questions",
     "evidence",
 }
 RELATIONSHIP_KEYS = {"source", "target", "type", "summary", "evidence"}
+SNAPSHOT_CHANGE_KEYS = {
+    "changes_sha256",
+    "baseline_available",
+    "previous_facts_sha256",
+    "added_projects",
+    "removed_projects",
+    "changed_projects",
+    "workspace_changed",
+    "relationships_changed",
+}
+PROJECT_CHANGE_KEYS = {"id", "fields"}
 
 SECRET_PATTERNS = (
     re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----", re.I),
@@ -66,6 +87,15 @@ def facts_sha256(manifest: dict[str, Any]) -> str:
     payload = dict(manifest)
     payload.pop("generated_at", None)
     payload.pop("facts_sha256", None)
+    payload.pop("snapshot_changes", None)
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def snapshot_changes_sha256(changes: dict[str, Any]) -> str:
+    """Hash the derived snapshot-change view independently from current facts."""
+    payload = dict(changes)
+    payload.pop("changes_sha256", None)
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
@@ -131,6 +161,64 @@ def _validate_string_list(value: Any, label: str) -> list[str]:
     return [_require_string(item, f"{label}[{index}]") for index, item in enumerate(_require_list(value, label))]
 
 
+def _require_bool(value: Any, label: str) -> bool:
+    if not isinstance(value, bool):
+        raise ManifestError(f"{label} must be a boolean")
+    return value
+
+
+def _validate_identifier_list(value: Any, label: str) -> list[str]:
+    items = _validate_string_list(value, label)
+    for index, item in enumerate(items):
+        if not ID_PATTERN.fullmatch(item):
+            raise ManifestError(f"{label}[{index}] must be a project identifier")
+    return sorted(set(items))
+
+
+def _validate_snapshot_changes(value: Any) -> dict[str, Any]:
+    changes = _require_mapping(value, "snapshot_changes")
+    _check_keys(changes, SNAPSHOT_CHANGE_KEYS, "snapshot_changes")
+    previous_hash = changes.get("previous_facts_sha256")
+    if previous_hash is not None:
+        previous_hash = _require_string(previous_hash, "snapshot_changes.previous_facts_sha256")
+        if not re.fullmatch(r"[0-9a-f]{64}", previous_hash):
+            raise ManifestError("snapshot_changes.previous_facts_sha256 must be a lowercase SHA-256 digest")
+    changed_projects: list[dict[str, Any]] = []
+    for index, raw_change in enumerate(_require_list(changes.get("changed_projects", []), "snapshot_changes.changed_projects")):
+        change = _require_mapping(raw_change, f"snapshot_changes.changed_projects[{index}]")
+        _check_keys(change, PROJECT_CHANGE_KEYS, f"snapshot_changes.changed_projects[{index}]")
+        project_id = _require_string(change.get("id"), f"snapshot_changes.changed_projects[{index}].id")
+        if not ID_PATTERN.fullmatch(project_id):
+            raise ManifestError(f"snapshot_changes.changed_projects[{index}].id must be a project identifier")
+        fields = _validate_string_list(change.get("fields", []), f"snapshot_changes.changed_projects[{index}].fields")
+        allowed_fields = PROJECT_KEYS - {"id"}
+        unknown_fields = sorted(set(fields) - allowed_fields)
+        if unknown_fields:
+            raise ManifestError(
+                f"snapshot_changes.changed_projects[{index}].fields contains unsupported fields: {', '.join(unknown_fields)}"
+            )
+        changed_projects.append({"id": project_id, "fields": sorted(set(fields))})
+    supplied_hash = _require_string(changes.get("changes_sha256"), "snapshot_changes.changes_sha256")
+    if not re.fullmatch(r"[0-9a-f]{64}", supplied_hash):
+        raise ManifestError("snapshot_changes.changes_sha256 must be a lowercase SHA-256 digest")
+    normalized = {
+        "baseline_available": _require_bool(changes.get("baseline_available"), "snapshot_changes.baseline_available"),
+        "previous_facts_sha256": previous_hash,
+        "added_projects": _validate_identifier_list(changes.get("added_projects", []), "snapshot_changes.added_projects"),
+        "removed_projects": _validate_identifier_list(changes.get("removed_projects", []), "snapshot_changes.removed_projects"),
+        "changed_projects": sorted(changed_projects, key=lambda item: item["id"]),
+        "workspace_changed": _require_bool(changes.get("workspace_changed"), "snapshot_changes.workspace_changed"),
+        "relationships_changed": _require_bool(
+            changes.get("relationships_changed"), "snapshot_changes.relationships_changed"
+        ),
+    }
+    expected_hash = snapshot_changes_sha256(normalized)
+    if supplied_hash != expected_hash:
+        raise ManifestError("snapshot_changes.changes_sha256 does not match the snapshot change view")
+    normalized["changes_sha256"] = supplied_hash
+    return normalized
+
+
 def validate_manifest(raw: Any) -> dict[str, Any]:
     manifest = _require_mapping(raw, "manifest")
     _check_keys(manifest, ROOT_KEYS, "manifest")
@@ -174,6 +262,15 @@ def validate_manifest(raw: Any) -> dict[str, Any]:
                     project.get("open_questions", []), f"projects[{index}].open_questions"
                 ),
                 "evidence": _validate_string_list(project.get("evidence", []), f"projects[{index}].evidence"),
+                **(
+                    {
+                        "constraints": _validate_string_list(
+                            project.get("constraints", []), f"projects[{index}].constraints"
+                        )
+                    }
+                    if "constraints" in project
+                    else {}
+                ),
             }
         )
 
@@ -213,6 +310,8 @@ def validate_manifest(raw: Any) -> dict[str, Any]:
             key=lambda relationship: (relationship["source"], relationship["target"], relationship["type"]),
         ),
     }
+    if "snapshot_changes" in manifest:
+        normalized["snapshot_changes"] = _validate_snapshot_changes(manifest["snapshot_changes"])
     if "facts_sha256" in manifest:
         supplied_sha256 = _require_string(manifest["facts_sha256"], "facts_sha256")
         if not re.fullmatch(r"[0-9a-f]{64}", supplied_sha256):
@@ -308,6 +407,19 @@ def render_markdown(manifest: dict[str, Any]) -> str:
     lines.extend(_bullet_section("已确认决策", workspace["decisions"]))
     lines.extend(_bullet_section("仍然未知", workspace["unknowns"]))
 
+    if changes := manifest.get("snapshot_changes"):
+        lines.extend(["## 与上次批准快照相比", ""])
+        if not changes["baseline_available"]:
+            lines.extend(["- 未提供上一份批准 manifest；本次只建立基线。", ""])
+        else:
+            lines.append(f"- 新增项目：{', '.join(changes['added_projects']) if changes['added_projects'] else '无'}")
+            lines.append(f"- 移除项目：{', '.join(changes['removed_projects']) if changes['removed_projects'] else '无'}")
+            for change in changes["changed_projects"]:
+                lines.append(f"- `{change['id']}` 变化字段：{', '.join(change['fields'])}")
+            lines.append(f"- 工作区描述变化：{'是' if changes['workspace_changed'] else '否'}")
+            lines.append(f"- 关系变化：{'是' if changes['relationships_changed'] else '否'}")
+            lines.append("")
+
     lines.extend(["## 项目", ""])
     for project in manifest["projects"]:
         lines.extend(
@@ -321,6 +433,7 @@ def render_markdown(manifest: dict[str, Any]) -> str:
             ]
         )
         lines.extend(_bullet_section("可观测信号", project["signals"]))
+        lines.extend(_bullet_section("已确认约束", project.get("constraints", [])))
         lines.extend(_bullet_section("风险", project["risks"]))
         lines.extend(_bullet_section("开放问题", project["open_questions"]))
         lines.extend(_bullet_section("证据", project["evidence"]))

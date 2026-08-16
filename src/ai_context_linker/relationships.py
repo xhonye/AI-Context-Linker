@@ -5,13 +5,19 @@ from __future__ import annotations
 import json
 import re
 import tomllib
+from collections import deque
 from pathlib import Path
 from typing import Any
+
+from .adapters import EXCLUDED_WALK_DIRECTORIES, is_link_or_reparse
 
 
 DEPENDENCY_METADATA_FILENAMES = ("pyproject.toml", "package.json", "Cargo.toml", "go.mod")
 MAX_DEPENDENCY_METADATA_BYTES = 128 * 1024
 GENERIC_REFERENCE_IDS = {"docs", "skills", "test", "tests"}
+CODE_RELATIONSHIP_EXTENSIONS = {".py", ".js", ".ts", ".ps1", ".json", ".yaml", ".yml", ".toml"}
+MAX_CODE_RELATIONSHIP_BYTES = 256 * 1024
+SENSITIVE_CODE_PATH_MARKERS = {"credential", "secret", "token", "password", "private-key", "private_key"}
 
 
 def _package_key(value: str) -> str:
@@ -212,3 +218,98 @@ def repeated_reference_fragments(
                 continue
             owners.setdefault(fragment.casefold(), set()).add(project_id)
     return {fragment for fragment, project_ids in owners.items() if len(project_ids) >= min_projects}
+
+
+def derive_code_path_relationships(
+    project_roots: dict[str, Path],
+    enabled_projects: set[str],
+    *,
+    max_depth: int = 5,
+    max_entries: int = 20_000,
+    max_files: int = 1_000,
+) -> tuple[list[dict[str, str]], dict[str, dict[str, int | bool]]]:
+    """Find exact cross-project roots without publishing source text or absolute paths."""
+    roots = {project_id: root.resolve() for project_id, root in project_roots.items()}
+    relationships: list[dict[str, str]] = []
+    reports: dict[str, dict[str, int | bool]] = {}
+    for source_id in sorted(enabled_projects):
+        source_root = roots[source_id]
+        needles = {
+            target_id: target_root.as_posix().casefold()
+            for target_id, target_root in roots.items()
+            if target_id != source_id
+        }
+        queue: deque[tuple[Path, int]] = deque([(source_root, 0)])
+        entries_inspected = 0
+        bodies_read = 0
+        truncated = False
+        seen_targets: set[str] = set()
+        while queue and bodies_read < max_files:
+            directory, depth = queue.popleft()
+            try:
+                children = sorted(directory.iterdir(), key=lambda item: item.name.casefold())
+            except OSError:
+                continue
+            for child in children:
+                entries_inspected += 1
+                if entries_inspected > max_entries:
+                    truncated = True
+                    queue.clear()
+                    break
+                if is_link_or_reparse(child):
+                    continue
+                if child.is_dir():
+                    if depth < max_depth and child.name.casefold() not in EXCLUDED_WALK_DIRECTORIES:
+                        resolved = child.resolve()
+                        if resolved.is_relative_to(source_root):
+                            queue.append((resolved, depth + 1))
+                    continue
+                if (
+                    not child.is_file()
+                    or child.suffix.casefold() not in CODE_RELATIONSHIP_EXTENSIONS
+                    or child.stat().st_size > MAX_CODE_RELATIONSHIP_BYTES
+                ):
+                    continue
+                relative = child.relative_to(source_root)
+                if {part.casefold() for part in relative.parts} & {"test", "tests", "fixture", "fixtures"}:
+                    continue
+                relative_lower = relative.as_posix().casefold()
+                if any(marker in relative_lower for marker in SENSITIVE_CODE_PATH_MARKERS):
+                    continue
+                try:
+                    lines = child.read_text(encoding="utf-8", errors="replace").splitlines()
+                except OSError:
+                    continue
+                bodies_read += 1
+                for line_number, line in enumerate(lines, start=1):
+                    if line.lstrip().startswith(("#", "//", "<!--")):
+                        continue
+                    normalized = line.replace("\\", "/").casefold()
+                    for target_id, needle in needles.items():
+                        if target_id in seen_targets:
+                            continue
+                        start = normalized.find(needle)
+                        if start < 0:
+                            continue
+                        end = start + len(needle)
+                        if end < len(normalized) and normalized[end] not in "/\\\"'` )]}:,":
+                            continue
+                        seen_targets.add(target_id)
+                        relationships.append(
+                            {
+                                "source": source_id,
+                                "target": target_id,
+                                "type": "code-path-dependency",
+                                "summary": f"Allowlisted local code/config references the approved root of `{target_id}`.",
+                                "evidence": f"{source_id}:code-path:{relative.as_posix()}:line-{line_number}",
+                            }
+                        )
+                if bodies_read >= max_files:
+                    truncated = True
+                    break
+        reports[source_id] = {
+            "entries_inspected": min(entries_inspected, max_entries),
+            "source_code_bodies_read": bodies_read,
+            "truncated": truncated,
+        }
+    return sorted(relationships, key=lambda item: (item["source"], item["target"])), reports

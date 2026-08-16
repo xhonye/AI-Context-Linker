@@ -61,14 +61,16 @@ ChatGPT 能正确承认自己无法读取本地磁盘，但也因此不知道今
 - 以限深、限量、只看文件名的方式识别常规入口和测试文件，不读取其内容或声称测试已通过。
 - 将 Git 未提交路径归类为 source、tests、docs、config、other，只发布数量而不发布文件名。
 - 从已批准的 README/AGENTS 元数据提取最多 5 条未完成复选项并保留相对行号证据；不扫描源码 TODO 注释。
+- 从已批准的 AGENTS/CLAUDE/PROJECT_CHARTER 明确边界、合同、原则、安全或存储小节提取最多 8 条项目约束。
 - 从经审阅的 pyproject/package.json/Cargo/go.mod 声明生成依赖边，并把 Markdown 代码标记或链接中的项目提及降级标为“文档引用”。
 - 自动忽略通用目录名、身份不唯一的包、普通正文名称命中和跨项目重复模板引用。
 - 先生成 `candidate-manifest.json` 和 `scan-report.json`，再由人审阅发布。
 - 从严格白名单 JSON manifest 生成稳定的 `ai_context_linker.md`。
 - 同时生成派生关系图 `ai_context_linker.graph.json`。
 - 拒绝未知字段、疑似密钥、本机绝对路径和悬空关系。
-- 事实快照带 SHA-256，可与上一份批准 manifest 比较项目和关系变化。
-- 不读取源码正文、不联网、不上传、不自动读取私人运行数据。
+- 事实快照与变化视图分别带 SHA-256，可比较关键项目字段和关系变化，又不让比较基线改变事实身份。
+- 可从已批准 manifest 确定性生成问题定向简报；无需 AI 预先阅读或总结本地项目。
+- 默认不读取源码正文、不联网、不上传、不自动读取私人运行数据；可逐项目显式开启本地 code-path 关系扫描，发布物仍不含源码行或绝对根路径。
 
 ## 快速体验
 
@@ -93,11 +95,19 @@ python -m ai_context_linker scan `
 python -m ai_context_linker build `
   --manifest "C:/Private/ai-context-linker/review/candidate-manifest.json" `
   --output-dir output
+
+# 可选：为当前聊天问题生成更小的 Context
+python -m ai_context_linker slice `
+  --manifest "C:/Private/ai-context-linker/review/candidate-manifest.json" `
+  --question "今天应该推进什么项目？" `
+  --output-dir output
 ```
 
 `discover` 只查看显式根目录的直属子目录、项目标志文件是否存在，不读取源码或元数据正文。它会把存在的 README、AGENTS、CLAUDE、ROADMAP、TODO、STATUS、CHANGELOG 和 PROJECT_CHARTER 根目录文件列为待批准元数据，但不会替你决定哪些项目或文件应当发布。包含本机路径的 workspace 配置必须留在私有目录；只有最终 `build` 输出才适合放入专用 Drive Context 目录。
 
-然后将 `output/ai_context_linker.md` 放到一个只用于 AI Context Linker 的 Google Drive 目录。不要把源码目录、工作区根目录或私人数据目录加入同步范围。
+默认扫描报告应为 `source_code_bodies_read: 0`。只有当你在某个私有项目配置中明确设置 `"code_relationship_scan": true` 时，Linker 才会在固定扩展名、深度、数量和大小上限内寻找对其他批准项目根目录的精确引用。候选关系只保留项目 ID 与相对文件行号，仍需人工审阅。
+
+然后将 `output/ai_context_linker.md`，或当前问题需要的 `output/ai_context_linker.question.md`，放到一个只用于 AI Context Linker 的 Google Drive 目录。不要把源码目录、工作区根目录或私人数据目录加入同步范围。
 
 ## 后续方向
 
@@ -116,7 +126,7 @@ python -m ai_context_linker build `
 
 ### V0.4 — 问题定向 Context 与质量评测
 
-- 围绕“今天推进什么”“哪些项目重复”等问题生成更小的认知切片；
+- 已可围绕“今天推进什么”“哪些项目重复”等问题确定性生成更小的认知切片；
 - 比较无上下文 Chat、AI Context Linker 和代码代理工作流的答案质量；
 - 衡量事实覆盖率、过期率、泄露拦截率和幻觉率。
 
