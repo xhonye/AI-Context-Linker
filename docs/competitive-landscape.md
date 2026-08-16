@@ -1,7 +1,8 @@
 # Automation and graph-tool landscape
 
-> Reviewed 2026-08-12. Percentages below are our estimates against the same
-> workflow stages; they are not metrics published by the compared projects.
+> Competitors reviewed 2026-08-12; the Linker row was updated 2026-08-16.
+> Percentages are our estimates against the same workflow stages, not metrics
+> published by the compared projects.
 
 AI Context Linker overlaps with code graphs and context graphs, but its boundary
 is different: it prepares a minimal project-development briefing for cloud AI
@@ -13,7 +14,7 @@ without publishing source-code bodies.
 | [CodeGraph](https://github.com/codegraph-ai/CodeGraph) | 90–95% | 0% in graph-only mode | Repository source code | Functions, imports, calls and PR blast radius |
 | [Microsoft GraphRAG](https://microsoft.github.io/graphrag/index/overview/) | 85–95% | Required by the standard entity, relationship and summary pipeline | Supplied unstructured text | General LLM-built RAG graph and community summaries |
 | [Graphiti](https://help.getzep.com/graphiti/getting-started/welcome) | 85–95% | Required in the normal episode-ingestion path | Text, messages and JSON episodes | Temporal agent memory with incremental updates |
-| AI Context Linker V0.2 | 75–80% from a new local workspace; 100% from an approved manifest | 0% | Explicit metadata allowlist; zero source-code bodies | Human-reviewed, cloud-safe project briefing |
+| AI Context Linker | About 90% from explicit workspace roots; 100% from an approved manifest | 0% | Metadata by default; bounded code/config reads only for per-project opt-in relationship discovery | Human-reviewed, cloud-safe project briefing for ordinary ChatGPT |
 
 ## Why not claim 100% end to end?
 
@@ -38,7 +39,7 @@ memory. AI Context Linker optimizes for a smaller cloud publication boundary.
 
 ## Direction
 
-The realistic target is **90% end-to-end workflow automation with one explicit
+The current workflow reaches **about 90% end-to-end automation with one explicit
 human approval gate**, plus **100% deterministic automation after a manifest has
 been approved**. Optional AI enrichment may be added later, but it must remain
 separate from confirmed facts and must never be required to build the bundle.

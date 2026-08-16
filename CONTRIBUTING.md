@@ -21,6 +21,10 @@ python -m ai_context_linker scan `
 python -m ai_context_linker build `
   --manifest output/review/candidate-manifest.json `
   --output-dir output
+python -m ai_context_linker slice `
+  --manifest output/review/candidate-manifest.json `
+  --question "What should I prioritize next?" `
+  --output-dir output
 ```
 
 ## Pull requests

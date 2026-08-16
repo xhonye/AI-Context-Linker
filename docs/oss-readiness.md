@@ -7,9 +7,9 @@
 - [x] Open JSON Schema and synthetic examples
 - [x] MIT license, contribution guide, security policy, and CI
 - [x] Optional agent Skill that delegates to the CLI
-- [ ] Public GitHub repository
-- [ ] Tagged `v0.1.0` release
-- [ ] Public demonstration using synthetic or deliberately approved facts
+- [x] Public GitHub repository
+- [x] Tagged `v0.1.0` release
+- [x] Public demonstration using synthetic or deliberately approved facts
 - [ ] First external user feedback or contribution
 
 ## Positioning
@@ -18,7 +18,7 @@ Describe AI Context Linker as a privacy-first context compiler and open schema. 
 
 ## Evidence to collect before applying for OSS support
 
-- Public release and maintenance history
+- Continued public maintenance history beyond the initial release
 - Real questions answered better with the generated bundle
 - Leakage tests and documented threat boundary
 - Issues, contributors, stars, installs, or a precise ecosystem role

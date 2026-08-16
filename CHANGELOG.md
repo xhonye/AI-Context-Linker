@@ -16,6 +16,10 @@
 - Add deterministic question-directed briefings for priority, change, relationship, overview, and named-project discussions.
 - Extract bounded project constraints from explicitly approved contract sections without reading source bodies.
 - Add an explicit opt-in code-path relationship adapter with bounded local reads and no source-text or absolute-root publication.
+- Align the public workspace schema with constraints and opt-in relationship scanning.
+- Skip hidden directories during opt-in code relationship discovery.
+- Reject bare Windows drive roots such as `D:/` from publishable text.
+- Reframe the public README around using ordinary ChatGPT as a project thinking partner.
 
 ## 0.2.0 - 2026-08-12
 

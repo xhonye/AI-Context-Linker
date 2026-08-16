@@ -1,165 +1,197 @@
 # AI Context Linker
 
-**让 ChatGPT 持续看懂你的本地项目，无需上传源码。**
+**Use ChatGPT as a project thinking partner — without uploading your repositories.**
 
-> Link your local projects to AI without sharing the codebase.
+> 让普通 ChatGPT 持续理解你的本地项目，只同步经过审阅的项目认知，不上传整个代码库。
 
-ChatGPT 很适合聊项目方向，但它默认不知道你的本地项目正在发生什么。把整个仓库上传到云端又过重，也可能泄露源码、密钥和私人运行数据。
+[![CI](https://github.com/xhonye/AI-Context-Linker/actions/workflows/ci.yml/badge.svg)](https://github.com/xhonye/AI-Context-Linker/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-AI Context Linker 在本地把人工批准的项目事实、关系、风险和待讨论问题编译成一个小型认知包。你只把这个认知包放进专用 Google Drive 目录，ChatGPT 通过 Drive 连接器读取的是项目地图，不是本地磁盘或整个仓库。
+ChatGPT is excellent at strategy, prioritization, and brainstorming. The problem is context: it cannot see what is happening across your local projects, while uploading whole repositories is noisy and can expose code, credentials, private paths, or runtime data.
 
-## 30 秒看懂
+AI Context Linker builds a small, reviewable project briefing on your computer. You decide what is allowed, inspect the candidate, and share only the generated Markdown through a file upload, a ChatGPT Project, or a dedicated Drive folder supported by your account.
 
-```text
-本地多个项目
-      ↓
-明确批准的事实 manifest
-      ↓  AI Context Linker 本地编译与安全检查
-一份 Markdown 简报 + 一份派生关系图
-      ↓  只同步专用 Context 目录
-Google Drive
-      ↓
-ChatGPT Chat 中的项目优先级、方向与头脑风暴
-```
+The result is a better ChatGPT conversation with much less repeated explanation.
 
-AI Context Linker 的核心不是让 ChatGPT“读电脑”，而是为它建立一个**最小、可审阅、可重建的项目认知面**。
+## What it helps you do
 
-## 真实 Before / After
+- Ask **“What should I move forward today?”** with the current project map already available.
+- Discuss **the next step for every project** without re-explaining each repository in every chat.
+- Find **overlap, dependencies, and possible consolidation** across many projects.
+- Ask **what changed since the last approved snapshot** instead of relying on stale memory.
+- Use ChatGPT for product direction and trade-offs, while reserving Codex or another coding agent for work that truly requires source access and execution.
 
-下面两张图使用了完全相同的问题：
+| Without a context layer | With AI Context Linker |
+|---|---|
+| ChatGPT starts from almost nothing | ChatGPT receives a current, structured project map |
+| You repeatedly paste background into new chats | One stable briefing can support many discussions |
+| Advice is generic because evidence is missing | Suggestions can cite approved facts, constraints, and changes |
+| The easiest shortcut is uploading too much | The publication surface is deliberately small and reviewable |
+| Activity can be mistaken for importance | The briefing tells ChatGPT not to infer value from commits or file counts |
+
+## Real before / after
+
+Both screenshots use the same question:
 
 > 从本地电脑看看我今天要推进什么项目
 
-### Before — 没有可用的项目认知包
+### Before — ChatGPT has no local project context
 
-ChatGPT 能正确承认自己无法读取本地磁盘，但也因此不知道今天应该推进哪个项目。
+ChatGPT correctly says it cannot inspect the computer, but it also cannot identify a concrete project or next step.
 
 <p align="center">
   <img src="docs/assets/demo-before.png" alt="Before: ChatGPT cannot identify which local project to advance" width="820">
 </p>
 
-### After — 通过 Drive 读取本地同步的 Context
+### After — ChatGPT reads a reviewed project briefing
 
-当专用 Context 目录同步到 Google Drive 后，ChatGPT 会先获取最新项目快照，再根据已确认事实给出具体的当日优先级和下一步。
+After the dedicated context file is available, ChatGPT can ground the discussion in actual project facts and propose a concrete priority with explicit reasoning.
 
 <p align="center">
-  <img src="docs/assets/demo-after.png" alt="After: ChatGPT retrieves the reviewed project context from Google Drive" width="820">
+  <img src="docs/assets/demo-after.png" alt="After: ChatGPT retrieves the reviewed project context" width="820">
 </p>
 
-> 截图中的 `SOL_REPO_CONTEXT_LATEST.md` 来自作者的早期本地原型。这个真实 dogfooding 工作流验证了需求；AI Context Linker 正在将其中可复用、可审计的部分做成独立开源工具。ChatGPT 没有直接访问截图中的仓库或源码。
+The screenshot uses the maintainer's earlier private dogfooding prototype. That workflow proved the use case. Its audited, reusable capabilities now live in AI Context Linker; ChatGPT still does not receive direct disk or repository access.
 
-## 它解决什么
+## How it works
 
-- 想聊项目方向、优先级和产品判断时，不必启动一次完整的代码代理任务。
-- ChatGPT 能先理解你正在做什么、项目之间怎样关联、哪些事实已经确认。
-- 云端只出现经过允许的最小信息，默认不出现源码、密钥、本机路径和私人运行数据。
-- 图谱帮助模型看到依赖、归属和约束，但它始终可从事实重建，不充当事实真源。
+```text
+Local project folders
+        ↓
+Discover project candidates from explicit roots
+        ↓
+Collect bounded, allowlisted facts on your computer
+        ↓
+Private candidate manifest + change report
+        ↓  human review and approval
+Stable Markdown briefing + derived relationship graph
+        ↓
+The file-delivery method supported by your ChatGPT account
+        ↓
+Grounded project strategy, prioritization, and brainstorming
+```
 
-## V0.2 已有能力
+AI Context Linker is a **local context compiler**, not a cloud crawler. The core package has no network or automatic upload behavior.
 
-- 从私有 workspace 配置自动读取明确 allowlist 的 README/AGENTS、Git 事实和指定路径存在性。
-- 以限深、限量、只看文件名的方式识别常规入口和测试文件，不读取其内容或声称测试已通过。
-- 将 Git 未提交路径归类为 source、tests、docs、config、other，只发布数量而不发布文件名。
-- 从已批准的 README/AGENTS 元数据提取最多 5 条未完成复选项并保留相对行号证据；不扫描源码 TODO 注释。
-- 从已批准的 AGENTS/CLAUDE/PROJECT_CHARTER 明确边界、合同、原则、安全或存储小节提取最多 8 条项目约束。
-- 从经审阅的 pyproject/package.json/Cargo/go.mod 声明生成依赖边，并把 Markdown 代码标记或链接中的项目提及降级标为“文档引用”。
-- 自动忽略通用目录名、身份不唯一的包、普通正文名称命中和跨项目重复模板引用。
-- 先生成 `candidate-manifest.json` 和 `scan-report.json`，再由人审阅发布。
-- 从严格白名单 JSON manifest 生成稳定的 `ai_context_linker.md`。
-- 同时生成派生关系图 `ai_context_linker.graph.json`。
-- 拒绝未知字段、疑似密钥、本机绝对路径和悬空关系。
-- 事实快照与变化视图分别带 SHA-256，可比较关键项目字段和关系变化，又不让比较基线改变事实身份。
-- 可从已批准 manifest 确定性生成问题定向简报；无需 AI 预先阅读或总结本地项目。
-- 默认不读取源码正文、不联网、不上传、不自动读取私人运行数据；可逐项目显式开启本地 code-path 关系扫描，发布物仍不含源码行或绝对根路径。
+## Privacy model
 
-## 快速体验
+Default scans may read approved project metadata such as README and AGENTS files, Git metadata, conventional entry-point filenames, test-file presence, and explicitly observed paths. They do not read source bodies.
 
-已有私有 workspace 配置时，可以直接从 `scan` 开始。第一次使用时，也可以先从一个或多个明确的工作区根目录发现候选项目：
+Before anything is suitable for sharing, Linker creates private review artifacts. The final compiler then:
+
+- accepts only a strict allowlist schema;
+- rejects unknown fields, common secret patterns, and local absolute paths;
+- keeps confirmed facts, unknowns, and derived relationships separate;
+- verifies deterministic fact and change hashes;
+- writes only to a directory you explicitly select.
+
+An optional per-project `code_relationship_scan` can inspect bounded local code/config files for exact references to another approved project root. It is off by default and publishes neither source lines nor absolute roots. Every derived edge remains a review candidate.
+
+Read the complete [security boundary](docs/security-boundary.md) before using real projects.
+
+## Quick start
+
+Requirements: Python 3.11 or newer.
 
 ```powershell
 git clone https://github.com/xhonye/AI-Context-Linker.git
 Set-Location AI-Context-Linker
 python -m pip install -e .
 
+# 1. Discover direct child projects under explicit roots.
 python -m ai_context_linker discover `
   --root "C:/Workspace" `
   --root "C:/Workspace/Projects" `
   --config-out "C:/Private/ai-context-linker/workspace.json"
 
-# 先删除误识别项目，并检查每个项目允许读取的元数据文件
+# 2. Remove unwanted candidates and review each metadata allowlist, then scan.
 python -m ai_context_linker scan `
   --config "C:/Private/ai-context-linker/workspace.json" `
   --review-dir "C:/Private/ai-context-linker/review"
 
-# 审阅 candidate-manifest.json 和 scan-report.json 后再发布
+# 3. Review candidate-manifest.json and scan-report.json before publishing.
 python -m ai_context_linker build `
   --manifest "C:/Private/ai-context-linker/review/candidate-manifest.json" `
   --output-dir output
 
-# 可选：为当前聊天问题生成更小的 Context
+# 4. Optional: create a smaller briefing for one discussion.
 python -m ai_context_linker slice `
   --manifest "C:/Private/ai-context-linker/review/candidate-manifest.json" `
-  --question "今天应该推进什么项目？" `
+  --question "What should I move forward today?" `
   --output-dir output
 ```
 
-`discover` 只查看显式根目录的直属子目录、项目标志文件是否存在，不读取源码或元数据正文。它会把存在的 README、AGENTS、CLAUDE、ROADMAP、TODO、STATUS、CHANGELOG 和 PROJECT_CHARTER 根目录文件列为待批准元数据，但不会替你决定哪些项目或文件应当发布。包含本机路径的 workspace 配置必须留在私有目录；只有最终 `build` 输出才适合放入专用 Drive Context 目录。
+Generated files:
 
-默认扫描报告应为 `source_code_bodies_read: 0`。只有当你在某个私有项目配置中明确设置 `"code_relationship_scan": true` 时，Linker 才会在固定扩展名、深度、数量和大小上限内寻找对其他批准项目根目录的精确引用。候选关系只保留项目 ID 与相对文件行号，仍需人工审阅。
+- `ai_context_linker.md` — the stable briefing for ordinary ChatGPT conversations;
+- `ai_context_linker.graph.json` — a rebuildable relationship view;
+- `ai_context_linker.question.md` — an optional question-directed briefing.
 
-然后将 `output/ai_context_linker.md`，或当前问题需要的 `output/ai_context_linker.question.md`，放到一个只用于 AI Context Linker 的 Google Drive 目录。不要把源码目录、工作区根目录或私人数据目录加入同步范围。
+Keep the workspace config, candidate manifest, and scan report in a private local directory. Share only an output you have reviewed. Do not connect or synchronize your repository root, workspace root, or private data directory.
 
-## 后续方向
+## Use it with ChatGPT
 
-### V0.2 — 从手写清单到可审计的本地采集 ✅
+Choose the narrowest delivery method available to your account:
 
-- 已引入明确 allowlist 的确定性本地采集器；
-- 已为自动采集事实生成类型化证据标签和快照哈希；
-- 已在发布前生成新增、删除、变化项目和关系预览。
+1. upload the reviewed Markdown to a conversation;
+2. add it to a dedicated ChatGPT Project;
+3. if your account or workspace supports a Google Drive connection, synchronize only a dedicated output folder.
 
-### V0.3 — 安全发现、可追溯变化与项目图谱
+Then try questions such as:
 
-- 从一个或多个显式工作区根目录生成私有项目候选配置；
-- 表达 decision、capability、document 和 open question；
-- 记录项目之间的支持、依赖、替代和阻塞关系；
-- 生成变化摘要、冲突检测和过期提醒。
+```text
+Read the latest AI Context Linker briefing first.
 
-### V0.4 — 问题定向 Context 与质量评测
+Which project should I advance this week, and why?
+Separate confirmed facts from your inference.
+Do not treat commit count or file count as project value.
+```
 
-- 已可围绕“今天推进什么”“哪些项目重复”等问题确定性生成更小的认知切片；
-- 比较无上下文 Chat、AI Context Linker 和代码代理工作流的答案质量；
-- 衡量事实覆盖率、过期率、泄露拦截率和幻觉率。
+```text
+Which projects appear to overlap or depend on one another?
+Which relationships are confirmed, which are only document references,
+and what is the smallest additional evidence needed?
+```
 
-### V1 — 可控刷新与开放生态
+```text
+What changed since the previous approved snapshot?
+Which earlier recommendation should be reconsidered because of those changes?
+```
 
-- 本地定时构建，只在事实变化时更新稳定文件；
-- 高风险变化继续要求人工确认；
-- 支持不同项目类型的社区适配器和多种云端文件通道。
+## Current capabilities
 
-## AI 时代的 Context 问题
+- shallow discovery across one or more explicit workspace roots;
+- private project selection and metadata allowlists;
+- bounded Git, entry-point, test-presence, open-item, and contract-constraint facts;
+- declared-dependency, explicit document-reference, and opt-in code-path relationships;
+- separate SHA-256 identities for the fact snapshot and its comparison view;
+- deterministic full and question-directed Markdown;
+- a derived JSON relationship graph;
+- fail-closed schema, secret, absolute-path, link, reparse-point, and root-escape checks;
+- zero required model calls from local collection to final output.
 
-AI 能力越强，它能否帮上忙就越取决于 Context。现在的常见选择却很极端：要么让 AI 在几乎不了解项目的情况下泛泛而谈，要么把大量仓库文件、历史和私人数据交给它。
+In a 2026-08-16 private dogfooding audit, Linker covered all 29 approved projects and recovered 130 of 141 agreed core fact instances (92.2%). The generated artifacts contained no source lines, local absolute paths, or common secret-pattern hits. See the aggregate [prototype migration audit](docs/prototype-migration-baseline.md); no private project data is committed here.
 
-AI Context Linker 尝试建立中间层：用结构化、最小化、可追溯的事实描述一个项目世界，让 AI 拥有足够理解，同时保留人对信息边界的控制。
+## What it is not
 
-这不只是“多给 AI 一份文档”，而是一类新的工程问题：
+AI Context Linker does not replace a coding agent. It does not inspect implementation details by default, run code, edit repositories, or decide priorities for you. It gives ChatGPT enough reviewed context to have a useful strategic conversation and tells it where evidence is still missing.
 
-- 哪些信息是已确认事实，哪些只是推断或未知；
-- Context 如何随项目变化，又不把过期快照当成当前现实；
-- 如何在足够有用和尽量少暴露之间建立可验证的边界；
-- 如何让同一份项目认知服务于 ChatGPT、编码 Agent 和其他 AI 工具，而不绑定某个产品。
+The graph is a derived navigation view, not a source of truth. Git activity is evidence of activity, not evidence of importance, adoption, or success.
 
-AI Context Linker 希望把这一层做成可审阅、可测试、可扩展的开放基础设施。
+## Project docs
 
-与图谱和代码 Context 项目的自动化边界对比见
-[`docs/competitive-landscape.md`](docs/competitive-landscape.md)。
-
-## 产品边界
-
-AI Context Linker 面向项目发展讨论，不替代 Codex 的代码读取、执行、测试和修改能力。“达到或优于 Work 的头脑风暴体验”是待验证目标，依赖 Context 质量，不是当前已证明的事实。
-
-更完整的边界见 [`PROJECT_CHARTER.md`](PROJECT_CHARTER.md) 和 [`docs/security-boundary.md`](docs/security-boundary.md)。
+- [Project charter](PROJECT_CHARTER.md)
+- [Architecture](docs/architecture.md)
+- [Context contract](docs/context-contract.md)
+- [Security boundary](docs/security-boundary.md)
+- [Roadmap](docs/roadmap.md)
+- [Competitive landscape](docs/competitive-landscape.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
 
 ## Open source
 
-AI Context Linker is licensed under MIT. The standalone CLI and JSON Schema are the product core; `skills/ai-context-linker/` is an optional thin interface for compatible agents. See [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SECURITY.md`](SECURITY.md), and [`docs/oss-readiness.md`](docs/oss-readiness.md) before contributing.
+AI Context Linker is MIT licensed. The standalone CLI and JSON Schemas are the product core; `skills/ai-context-linker/` is an optional thin interface for compatible agents.
+
+If this solves a context problem you have with ChatGPT, try it on a synthetic or low-risk workspace first, share what was confusing, and consider starring the repository so more people can find it.
