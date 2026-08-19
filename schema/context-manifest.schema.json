@@ -11,6 +11,7 @@
     "workspace": {"$ref": "#/$defs/workspace"},
     "projects": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/project"}},
     "relationships": {"type": "array", "items": {"$ref": "#/$defs/relationship"}},
+    "skills": {"type": "array", "items": {"$ref": "#/$defs/skill"}},
     "snapshot_changes": {"$ref": "#/$defs/snapshotChanges"}
   },
   "$defs": {
@@ -57,6 +58,19 @@
         "evidence": {"$ref": "#/$defs/safeString"}
       }
     },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "provider", "scope", "name", "summary", "evidence"],
+      "properties": {
+        "source": {"$ref": "#/$defs/identifier"},
+        "provider": {"$ref": "#/$defs/identifier"},
+        "scope": {"enum": ["user", "workspace", "custom"]},
+        "name": {"$ref": "#/$defs/safeString"},
+        "summary": {"$ref": "#/$defs/safeString"},
+        "evidence": {"$ref": "#/$defs/safeString"}
+      }
+    },
     "snapshotChanges": {
       "type": "object",
       "additionalProperties": false,
@@ -83,7 +97,8 @@
           }
         },
         "workspace_changed": {"type": "boolean"},
-        "relationships_changed": {"type": "boolean"}
+        "relationships_changed": {"type": "boolean"},
+        "skills_changed": {"type": "boolean"}
       }
     }
   }

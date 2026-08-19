@@ -19,5 +19,13 @@
       "open_questions": ["Which additional metadata adapters should be supported?"]
     }
   ],
+  "skill_roots": [
+    {
+      "id": "synthetic-agent-skills",
+      "provider": "agent-skills",
+      "scope": "workspace",
+      "path": "synthetic-skills"
+    }
+  ],
   "relationships": []
 }

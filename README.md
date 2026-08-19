@@ -103,6 +103,7 @@ python -m pip install -e .
 python -m ai_context_linker discover `
   --root "C:/Workspace" `
   --root "C:/Workspace/Projects" `
+  --include-skills `
   --config-out "C:/Private/ai-context-linker/workspace.json"
 
 # 2. Remove unwanted candidates and review each metadata allowlist, then scan.
@@ -127,6 +128,21 @@ Generated files:
 - `ai_context_linker.md` — the stable briefing for ordinary ChatGPT conversations;
 - `ai_context_linker.graph.json` — a rebuildable relationship view;
 - `ai_context_linker.question.md` — an optional question-directed briefing.
+
+### Optional cross-tool Skill inventory
+
+`discover --include-skills` adds detected, private Skill roots for:
+
+- Codex and the shared Agent Skills standard: `~/.agents/skills` and project `.agents/skills`;
+- Codex desktop compatibility: `~/.codex/skills`;
+- Claude Code: `~/.claude/skills` and project `.claude/skills`;
+- Gemini CLI: `~/.gemini/skills`, project `.gemini/skills`, and the shared `.agents/skills` alias.
+
+The scanner reads only the bounded YAML frontmatter in each direct child `SKILL.md`, extracts `name` and `description`, and stops at the closing `---`. It does not read the instruction body, bundled scripts, references, or assets. Published Skill records contain no local root path.
+
+Skill descriptions receive stricter privacy checks than ordinary prose. Secrets fail the scan closed; absolute paths, URLs, email addresses, IP endpoints, and UNC addresses cause the summary to be replaced with a safe omission notice. The final compiler repeats these checks so an edited manifest cannot bypass them.
+
+See [Skill inventory and privacy](docs/skill-inventory.md) for supported locations, limits, and evidence sources.
 
 Keep the workspace config, candidate manifest, and scan report in a private local directory. Share only an output you have reviewed. Do not connect or synchronize your repository root, workspace root, or private data directory.
 
@@ -164,6 +180,7 @@ Which earlier recommendation should be reconsidered because of those changes?
 - shallow discovery across one or more explicit workspace roots;
 - private project selection and metadata allowlists;
 - bounded Git, entry-point, test-presence, open-item, and contract-constraint facts;
+- cross-tool Skill names and privacy-checked frontmatter summaries without instruction bodies;
 - declared-dependency, explicit document-reference, and opt-in code-path relationships;
 - separate SHA-256 identities for the fact snapshot and its comparison view;
 - deterministic full and question-directed Markdown;
@@ -187,6 +204,7 @@ The graph is a derived navigation view, not a source of truth. Git activity is e
 - [Security boundary](docs/security-boundary.md)
 - [Roadmap](docs/roadmap.md)
 - [Competitive landscape](docs/competitive-landscape.md)
+- [Skill inventory and privacy](docs/skill-inventory.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 

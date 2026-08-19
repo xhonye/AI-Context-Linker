@@ -48,6 +48,16 @@
       ]
     }
   ],
+  "skills": [
+    {
+      "source": "synthetic-agent-skills",
+      "provider": "agent-skills",
+      "scope": "workspace",
+      "name": "sample-skill",
+      "summary": "Summarize synthetic project facts for a safe demonstration.",
+      "evidence": "skill-frontmatter:agent-skills:workspace"
+    }
+  ],
   "relationships": [
     {
       "source": "collector",

@@ -22,6 +22,11 @@ def build_parser() -> argparse.ArgumentParser:
     discover.add_argument("--root", required=True, action="append", type=Path, help="root whose direct children may be projects; repeat for multiple roots")
     discover.add_argument("--config-out", required=True, type=Path, help="private JSON configuration to create")
     discover.add_argument("--workspace-name", default="Discovered workspace", help="human-readable workspace name")
+    discover.add_argument(
+        "--include-skills",
+        action="store_true",
+        help="add detected Codex, Claude Code, Gemini CLI, and shared Agent Skills roots to the private config",
+    )
     discover.add_argument("--force", action="store_true", help="replace an existing config after reviewing the target")
     build = subparsers.add_parser("build", help="validate a manifest and build the stable context bundle")
     build.add_argument("--manifest", required=True, type=Path, help="approved JSON manifest")
@@ -47,6 +52,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.root,
                 args.config_out,
                 workspace_name=args.workspace_name,
+                include_skills=args.include_skills,
                 overwrite=args.force,
             )
             print(result.config.resolve())

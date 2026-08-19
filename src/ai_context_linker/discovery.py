@@ -16,6 +16,7 @@ from .adapters import is_link_or_reparse
 from .core import ManifestError, _atomic_write_text
 from .relationships import DEPENDENCY_METADATA_FILENAMES
 from .scanner import DEFAULT_ALLOW_FILES, SYNC_DIRECTORY_MARKERS
+from .skills import default_user_skill_roots, project_skill_roots
 
 
 PROJECT_MARKERS = {
@@ -144,6 +145,7 @@ def discover_workspace(
     config_path: Path | str,
     *,
     workspace_name: str = "Discovered workspace",
+    include_skills: bool = False,
     overwrite: bool = False,
 ) -> DiscoveryResult:
     """Write a private, reviewable workspace configuration for ``scan``."""
@@ -166,6 +168,11 @@ def discover_workspace(
         },
         "projects": projects,
         "relationships": [],
+        **(
+            {"skill_roots": [*default_user_skill_roots(), *project_skill_roots(projects)]}
+            if include_skills
+            else {}
+        ),
     }
     _atomic_write_text(destination, json.dumps(config, ensure_ascii=False, indent=2) + "\n")
     return DiscoveryResult(config=destination, project_count=len(projects))

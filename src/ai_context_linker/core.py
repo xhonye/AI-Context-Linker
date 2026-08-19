@@ -28,6 +28,7 @@ ROOT_KEYS = {
     "workspace",
     "projects",
     "relationships",
+    "skills",
     "snapshot_changes",
 }
 WORKSPACE_KEYS = {"name", "summary", "current_focus", "decisions", "unknowns"}
@@ -43,6 +44,7 @@ PROJECT_KEYS = {
     "evidence",
 }
 RELATIONSHIP_KEYS = {"source", "target", "type", "summary", "evidence"}
+SKILL_KEYS = {"source", "provider", "scope", "name", "summary", "evidence"}
 SNAPSHOT_CHANGE_KEYS = {
     "changes_sha256",
     "baseline_available",
@@ -52,6 +54,7 @@ SNAPSHOT_CHANGE_KEYS = {
     "changed_projects",
     "workspace_changed",
     "relationships_changed",
+    "skills_changed",
 }
 PROJECT_CHANGE_KEYS = {"id", "fields"}
 
@@ -67,6 +70,12 @@ SECRET_PATTERNS = (
 ABSOLUTE_PATH_PATTERNS = (
     re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/][^\s`]*"),
     re.compile(r"(?<![A-Za-z0-9])/(?:Users|home|mnt|var|etc|opt)/[^\s`]+", re.I),
+)
+SKILL_ADDRESS_PATTERNS = (
+    re.compile(r"https?://\S+", re.I),
+    re.compile(r"(?<![\w.-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])"),
+    re.compile(r"(?<!\d)(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?(?!\d)"),
+    re.compile(r"\\\\[^\s\\]+\\[^\s]+"),
 )
 
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
@@ -157,6 +166,14 @@ def validate_publish_text(text: str, label: str = "text") -> None:
             raise ManifestError(f"{label} contains a machine-specific absolute path")
 
 
+def validate_skill_summary(text: str, label: str = "skill summary") -> None:
+    """Apply stricter checks to automatically published Skill descriptions."""
+    validate_publish_text(text, label)
+    for pattern in SKILL_ADDRESS_PATTERNS:
+        if pattern.search(text):
+            raise ManifestError(f"{label} contains a potentially sensitive address")
+
+
 def _validate_string_list(value: Any, label: str) -> list[str]:
     return [_require_string(item, f"{label}[{index}]") for index, item in enumerate(_require_list(value, label))]
 
@@ -210,6 +227,11 @@ def _validate_snapshot_changes(value: Any) -> dict[str, Any]:
         "workspace_changed": _require_bool(changes.get("workspace_changed"), "snapshot_changes.workspace_changed"),
         "relationships_changed": _require_bool(
             changes.get("relationships_changed"), "snapshot_changes.relationships_changed"
+        ),
+        **(
+            {"skills_changed": _require_bool(changes.get("skills_changed"), "snapshot_changes.skills_changed")}
+            if "skills_changed" in changes
+            else {}
         ),
     }
     expected_hash = snapshot_changes_sha256(normalized)
@@ -300,6 +322,30 @@ def validate_manifest(raw: Any) -> dict[str, Any]:
             }
         )
 
+    skills: list[dict[str, str]] = []
+    for index, item in enumerate(_require_list(manifest.get("skills", []), "skills")):
+        skill = _require_mapping(item, f"skills[{index}]")
+        _check_keys(skill, SKILL_KEYS, f"skills[{index}]")
+        source = _require_string(skill.get("source"), f"skills[{index}].source")
+        provider = _require_string(skill.get("provider"), f"skills[{index}].provider")
+        scope = _require_string(skill.get("scope"), f"skills[{index}].scope")
+        if not ID_PATTERN.fullmatch(source) or not ID_PATTERN.fullmatch(provider):
+            raise ManifestError(f"skills[{index}] source and provider must be identifiers")
+        if scope not in {"user", "workspace", "custom"}:
+            raise ManifestError(f"skills[{index}].scope must be user, workspace, or custom")
+        skills.append(
+            {
+                "source": source,
+                "provider": provider,
+                "scope": scope,
+                "name": _require_string(skill.get("name"), f"skills[{index}].name"),
+                "summary": _require_string(skill.get("summary"), f"skills[{index}].summary"),
+                "evidence": _require_string(skill.get("evidence"), f"skills[{index}].evidence"),
+            }
+        )
+        validate_skill_summary(skills[-1]["name"], f"skills[{index}].name")
+        validate_skill_summary(skills[-1]["summary"], f"skills[{index}].summary")
+
     normalized = {
         "schema_version": SCHEMA_VERSION,
         "generated_at": generated_at,
@@ -308,6 +354,16 @@ def validate_manifest(raw: Any) -> dict[str, Any]:
         "relationships": sorted(
             relationships,
             key=lambda relationship: (relationship["source"], relationship["target"], relationship["type"]),
+        ),
+        **(
+            {
+                "skills": sorted(
+                    skills,
+                    key=lambda skill: (skill["provider"], skill["scope"], skill["name"].casefold(), skill["source"]),
+                )
+            }
+            if "skills" in manifest
+            else {}
         ),
     }
     if "snapshot_changes" in manifest:
@@ -418,6 +474,8 @@ def render_markdown(manifest: dict[str, Any]) -> str:
                 lines.append(f"- `{change['id']}` 变化字段：{', '.join(change['fields'])}")
             lines.append(f"- 工作区描述变化：{'是' if changes['workspace_changed'] else '否'}")
             lines.append(f"- 关系变化：{'是' if changes['relationships_changed'] else '否'}")
+            if "skills_changed" in changes:
+                lines.append(f"- Skill 清单变化：{'是' if changes['skills_changed'] else '否'}")
             lines.append("")
 
     lines.extend(["## 项目", ""])
@@ -437,6 +495,24 @@ def render_markdown(manifest: dict[str, Any]) -> str:
         lines.extend(_bullet_section("风险", project["risks"]))
         lines.extend(_bullet_section("开放问题", project["open_questions"]))
         lines.extend(_bullet_section("证据", project["evidence"]))
+
+    if "skills" in manifest:
+        lines.extend(
+            [
+                "## 可用 Skills",
+                "",
+                "> 仅包含 Skill 名称与 frontmatter 摘要；指令正文、脚本和本机目录未进入本简报。",
+                "",
+            ]
+        )
+        if manifest["skills"]:
+            for skill in manifest["skills"]:
+                lines.append(
+                    f"- **{skill['name']}** · `{skill['provider']}` / `{skill['scope']}`：{skill['summary']}"
+                )
+        else:
+            lines.append("- 未发现经过批准的 Skill 元数据")
+        lines.append("")
 
     lines.extend(["## 项目关系图谱", "", "> 本节是由显式清单派生的可重建视图，不是独立真源。", ""])
     if manifest["relationships"]:

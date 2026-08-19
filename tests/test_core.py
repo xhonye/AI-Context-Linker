@@ -120,6 +120,46 @@ def test_optional_constraints_are_validated_and_rendered(tmp_path: Path) -> None
     assert "Only approved facts may be published." in paths.markdown.read_text(encoding="utf-8")
 
 
+def test_optional_skills_are_validated_and_rendered(tmp_path: Path) -> None:
+    manifest = valid_manifest()
+    manifest["skills"] = [
+        {
+            "source": "codex-user",
+            "provider": "codex",
+            "scope": "user",
+            "name": "project-review",
+            "summary": "Review approved project facts.",
+            "evidence": "skill-frontmatter:codex:user",
+        }
+    ]
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+
+    paths = build_bundle(manifest_path, tmp_path / "publish")
+    rendered = paths.markdown.read_text(encoding="utf-8")
+
+    assert "## 可用 Skills" in rendered
+    assert "project-review" in rendered
+    assert "Review approved project facts." in rendered
+
+
+def test_skill_summary_address_is_rejected_by_final_compiler() -> None:
+    manifest = valid_manifest()
+    manifest["skills"] = [
+        {
+            "source": "codex-user",
+            "provider": "codex",
+            "scope": "user",
+            "name": "internal",
+            "summary": "Connect to user@example.com for access.",
+            "evidence": "skill-frontmatter:codex:user",
+        }
+    ]
+
+    with pytest.raises(ManifestError, match="sensitive address"):
+        validate_manifest(manifest)
+
+
 def test_relationship_type_cannot_inject_markup() -> None:
     manifest = valid_manifest()
     manifest["relationships"][0]["type"] = "feeds--> `unknown`"

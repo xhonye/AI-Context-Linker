@@ -55,6 +55,34 @@ def test_scanner_builds_candidate_without_reading_source_bodies(tmp_path: Path) 
     assert "private.py" not in json.dumps(candidate)
 
 
+def test_scanner_collects_cross_tool_skill_frontmatter_only(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "README.md").write_text("# Safe\n\nSafe project.\n", encoding="utf-8")
+    skill_root = tmp_path / "claude-skills"
+    skill_dir = skill_root / "project-review"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: project-review\ndescription: Review project direction.\n---\n"
+        "Secret instruction body at C:/Users/example/private.\n",
+        encoding="utf-8",
+    )
+    config = json.loads(write_config(tmp_path, project).read_text(encoding="utf-8"))
+    config["skill_roots"] = [
+        {"id": "claude-user", "provider": "claude-code", "scope": "user", "path": str(skill_root)}
+    ]
+    config_path = tmp_path / "skills-workspace.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+
+    candidate, report = collect_candidate(config_path)
+
+    assert candidate["skills"][0]["name"] == "project-review"
+    assert candidate["skills"][0]["summary"] == "Review project direction."
+    assert "C:/Users" not in json.dumps(candidate)
+    assert report["skills"]["instruction_bodies_read"] == 0
+    assert report["skills"]["skills_collected"] == 1
+
+
 def test_candidate_hash_ignores_observation_time(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()

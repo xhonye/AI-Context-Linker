@@ -34,6 +34,7 @@ PRIORITY_TERMS = (
     "priority",
     "prioritize",
 )
+SKILL_TERMS = ("skill", "skills", "技能", "能力", "工具", "capability", "tooling")
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,9 @@ def _mode_and_projects(manifest: dict[str, Any], question: str) -> tuple[str, li
             if relationship["source"] in mentioned or relationship["target"] in mentioned:
                 selected.update((relationship["source"], relationship["target"]))
         return "project", [project for project in projects if project["id"] in selected]
+
+    if any(term in lowered for term in SKILL_TERMS):
+        return "skills", []
 
     if any(term in lowered for term in CHANGE_TERMS):
         changes = manifest.get("snapshot_changes")
@@ -147,6 +151,24 @@ def render_question_context(manifest: dict[str, Any], question: str) -> str:
     ]
     if mode == "changes":
         lines.extend(_render_changes(manifest.get("snapshot_changes")))
+
+    if mode == "skills":
+        lines.extend(
+            [
+                "## 可用 Skills",
+                "",
+                "> 仅列出批准发布的名称与摘要，不包含 Skill 指令正文或本机目录。",
+                "",
+            ]
+        )
+        if manifest.get("skills"):
+            for skill in manifest["skills"]:
+                lines.append(
+                    f"- **{skill['name']}** · `{skill['provider']}` / `{skill['scope']}`：{skill['summary']}"
+                )
+        else:
+            lines.append("- 当前批准 manifest 没有 Skill 清单。")
+        lines.append("")
 
     lines.extend(["## 与问题相关的项目事实", ""])
     if projects:

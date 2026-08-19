@@ -31,6 +31,28 @@ def test_discovery_finds_direct_projects_without_reading_source_bodies(tmp_path:
     assert "private.py" not in raw
 
 
+def test_discovery_can_add_project_skill_roots_without_reading_skill_body(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    project = workspace / "project"
+    skill_dir = project / ".agents" / "skills" / "safe-skill"
+    skill_dir.mkdir(parents=True)
+    (project / "README.md").write_text("# Project\n", encoding="utf-8")
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: safe-skill\ndescription: Safe summary.\n---\nprivate body\n",
+        encoding="utf-8",
+    )
+
+    result = discover_workspace(
+        [workspace],
+        tmp_path / "private" / "workspace.json",
+        include_skills=True,
+    )
+    config = json.loads(result.config.read_text(encoding="utf-8"))
+
+    assert any(root["provider"] == "agent-skills" for root in config["skill_roots"])
+    assert "private body" not in result.config.read_text(encoding="utf-8")
+
+
 def test_discovery_deduplicates_overlapping_explicit_roots(tmp_path: Path) -> None:
     container = tmp_path / "Projects"
     container.mkdir()

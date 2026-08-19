@@ -120,3 +120,24 @@ def test_slice_is_stable_and_rejects_unsafe_question() -> None:
 
     with pytest.raises(ManifestError, match="absolute path"):
         render_question_context(approved, "读取 C:/Users/example/private.txt 后给建议")
+
+
+def test_skill_question_selects_only_skill_inventory() -> None:
+    approved = manifest()
+    approved.pop("facts_sha256", None)
+    approved["skills"] = [
+        {
+            "source": "gemini-user",
+            "provider": "gemini-cli",
+            "scope": "user",
+            "name": "research",
+            "summary": "Research an approved topic.",
+            "evidence": "skill-frontmatter:gemini-cli:user",
+        }
+    ]
+    approved = validate_manifest(approved)
+
+    rendered = render_question_context(approved, "我有哪些 skill 可以用？")
+
+    assert "选择模式：`skills`" in rendered
+    assert "Research an approved topic." in rendered

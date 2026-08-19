@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add opt-in Skill discovery across Codex/Agent Skills, Claude Code, and Gemini CLI user and workspace roots.
+- Read only bounded `SKILL.md` frontmatter names and descriptions, never instruction bodies or supporting files.
+- Apply compiler-enforced secret, path, URL, email, IP endpoint, and UNC-address checks to Skill summaries.
+- Add Skill inventory rendering, change detection, and question-directed slicing.
 - Add shallow project discovery across explicit workspace roots.
 - Keep discovered absolute paths confined to a private, reviewable configuration.
 - Reject cloud-synced config targets, directory links, reparse points, root escapes, and accidental overwrite.

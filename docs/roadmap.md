@@ -46,3 +46,11 @@
 - 有变化才更新稳定文件；
 - 高风险变化必须人工确认；
 - Drive 仍只接收发布层，不接触原始项目目录。
+
+## 跨工具 Skill 能力索引
+
+- [x] 扫描 Codex/Agent Skills、Claude Code 与 Gemini CLI 常见用户和项目位置；
+- [x] 只读取 `SKILL.md` 的名称与摘要 frontmatter，不读取指令正文；
+- [x] 对摘要执行 secret、路径、URL、邮箱、IP 与 UNC 地址检查；
+- [x] 在全景和 Skill 定向问题切片中发布无路径能力索引；
+- [ ] 支持插件与企业托管 Skill 的显式适配器。

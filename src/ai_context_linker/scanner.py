@@ -34,9 +34,10 @@ from .relationships import (
     parse_dependency_metadata,
     repeated_reference_fragments,
 )
+from .skills import collect_skill_root
 
 
-CONFIG_KEYS = {"schema_version", "workspace", "projects", "relationships"}
+CONFIG_KEYS = {"schema_version", "workspace", "projects", "relationships", "skill_roots"}
 CONFIG_PROJECT_KEYS = {
     "id",
     "path",
@@ -53,6 +54,7 @@ CONFIG_PROJECT_KEYS = {
 }
 WORKSPACE_KEYS = {"name", "summary", "current_focus", "decisions", "unknowns"}
 RELATIONSHIP_KEYS = {"source", "target", "type", "summary", "evidence"}
+SKILL_ROOT_KEYS = {"id", "provider", "scope", "path"}
 DEFAULT_ALLOW_FILES = (
     "README.md",
     "AGENTS.md",
@@ -403,6 +405,39 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         "unknowns": _strings(workspace.get("unknowns", []), "workspace.unknowns"),
     }
 
+    skills: list[dict[str, str]] = []
+    skill_reports: list[dict[str, Any]] = []
+    skill_root_ids: set[str] = set()
+    for index, raw_skill_root in enumerate(_list(config.get("skill_roots", []), "skill_roots")):
+        skill_root = _mapping(raw_skill_root, f"skill_roots[{index}]")
+        _keys(skill_root, SKILL_ROOT_KEYS, f"skill_roots[{index}]")
+        root_id = str(_string(skill_root.get("id"), f"skill_roots[{index}].id"))
+        provider = str(_string(skill_root.get("provider"), f"skill_roots[{index}].provider"))
+        scope = str(_string(skill_root.get("scope"), f"skill_roots[{index}].scope"))
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}", root_id):
+            raise ManifestError(f"skill_roots[{index}].id must be an identifier")
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}", provider):
+            raise ManifestError(f"skill_roots[{index}].provider must be an identifier")
+        if scope not in {"user", "workspace", "custom"}:
+            raise ManifestError(f"skill_roots[{index}].scope must be user, workspace, or custom")
+        if root_id in skill_root_ids:
+            raise ManifestError(f"duplicate skill root id: {root_id}")
+        skill_root_ids.add(root_id)
+        raw_root = str(_string(skill_root.get("path"), f"skill_roots[{index}].path"))
+        root_candidate = Path(raw_root).expanduser()
+        unresolved_root = path.parent / root_candidate if not root_candidate.is_absolute() else root_candidate
+        if unresolved_root.exists() and is_link_or_reparse(unresolved_root):
+            raise ManifestError(f"skill_roots[{index}].path must not be a link or reparse point")
+        root = unresolved_root.resolve()
+        collected, root_report = collect_skill_root(
+            root,
+            root_id=root_id,
+            provider=provider,
+            scope=scope,
+        )
+        skills.extend(collected)
+        skill_reports.append(root_report)
+
     projects: list[dict[str, Any]] = []
     report_projects: list[dict[str, Any]] = []
     relationship_inputs: dict[str, dict[str, Any]] = {}
@@ -627,6 +662,7 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         "workspace": normalized_workspace,
         "projects": projects,
         "relationships": relationships,
+        **({"skills": skills} if "skill_roots" in config else {}),
     }
     candidate = validate_manifest(candidate)
     candidate["facts_sha256"] = facts_sha256(candidate)
@@ -648,6 +684,13 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
             "document_reference": len(derived_documents),
             "repeated_reference_fragments_ignored": len(repeated_fragments),
         },
+        "skills": {
+            "roots_configured": len(skill_reports),
+            "roots_scanned": sum(report["status"] == "scanned" for report in skill_reports),
+            "skills_collected": len(skills),
+            "instruction_bodies_read": 0,
+            "roots": skill_reports,
+        },
         "projects": sorted(report_projects, key=lambda item: item["id"]),
     }
     return candidate, report
@@ -664,6 +707,7 @@ def _change_summary(candidate: dict[str, Any], previous: dict[str, Any] | None) 
             "changed_project_fields": {},
             "workspace_changed": True,
             "relationships_changed": bool(candidate["relationships"]),
+            "skills_changed": bool(candidate.get("skills", [])),
         }
     current_projects = {project["id"]: project for project in candidate["projects"]}
     previous_projects = {project["id"]: project for project in previous["projects"]}
@@ -684,15 +728,17 @@ def _change_summary(candidate: dict[str, Any], previous: dict[str, Any] | None) 
     }
     workspace_changed = candidate["workspace"] != previous["workspace"]
     relationships_changed = candidate["relationships"] != previous["relationships"]
+    skills_changed = candidate.get("skills", []) != previous.get("skills", [])
     return {
         "baseline_available": True,
-        "changed": bool(added or removed or changed_projects or workspace_changed or relationships_changed),
+        "changed": bool(added or removed or changed_projects or workspace_changed or relationships_changed or skills_changed),
         "added_projects": added,
         "removed_projects": removed,
         "changed_projects": changed_projects,
         "changed_project_fields": changed_project_fields,
         "workspace_changed": workspace_changed,
         "relationships_changed": relationships_changed,
+        "skills_changed": skills_changed,
     }
 
 
@@ -719,6 +765,7 @@ def scan_workspace(
         ],
         "workspace_changed": changes["workspace_changed"],
         "relationships_changed": changes["relationships_changed"],
+        "skills_changed": changes["skills_changed"],
     }
     snapshot_changes["changes_sha256"] = snapshot_changes_sha256(snapshot_changes)
     candidate["snapshot_changes"] = snapshot_changes

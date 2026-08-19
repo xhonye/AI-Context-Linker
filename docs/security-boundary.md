@@ -52,3 +52,6 @@ ChatGPT 的 Google Drive 集成会访问或索引用户授权范围内的内容�
 - 依赖关系只解析经审阅的固定根目录依赖清单，且只在目标包身份唯一时成立；文档引用只认 Markdown 代码标记或链接，并过滤普通正文和重复模板。二者都不读取或发布源码正文，文档引用不会升级成依赖证明。
 - 可选 `code_relationship_scan` 默认关闭，必须在每个私有项目配置中显式开启。它只扫描固定代码/配置扩展名，受深度、条目数、文件数和 256 KiB 文件大小上限约束，并跳过隐藏目录、测试、fixture、敏感文件名、依赖、生成目录、symlink 与 reparse point。输出只含项目 ID 和相对文件行号，不含源码行、secret 或绝对根路径；扫描报告必须披露读取文件数与截断状态。
 - `slice` 只读取已通过上述校验的 manifest；问题文本限制为 500 字符并再次执行 secret 与绝对路径拦截。它不调用模型，不把问题或选择规则写回事实层。
+- Skill 扫描必须由 `--include-skills` 或私有配置中的 `skill_roots` 显式开启。适配器只读取每个直属 Skill 目录中最多 16 KiB 的 YAML frontmatter，并在结束分隔符处停止；不读取指令正文、脚本、references 或 assets。
+- Skill 发布字段只有来源标识、工具、scope、名称、摘要和无路径证据标签。本机 Skill 根路径只存在于私有配置；链接、reparse point、隐藏目录和非标准入口会跳过或失败关闭。
+- Skill 摘要除通用 secret 与绝对路径规则外，还拒绝 URL、邮箱、IP/端口和 UNC 地址。疑似 secret 使扫描失败；其他地址类摘要以安全占位符替代。最终 build 会重复校验，不能靠手改 manifest 绕过。

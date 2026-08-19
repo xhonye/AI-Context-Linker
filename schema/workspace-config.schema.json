@@ -8,10 +8,22 @@
     "schema_version": {"const": "0.2"},
     "workspace": {"$ref": "context-manifest.schema.json#/$defs/workspace"},
     "projects": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/projectSource"}},
+    "skill_roots": {"type": "array", "items": {"$ref": "#/$defs/skillRoot"}},
     "relationships": {"type": "array", "items": {"$ref": "context-manifest.schema.json#/$defs/relationship"}}
   },
   "$defs": {
     "relativePath": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "skillRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "provider", "scope", "path"],
+      "properties": {
+        "id": {"$ref": "context-manifest.schema.json#/$defs/identifier"},
+        "provider": {"$ref": "context-manifest.schema.json#/$defs/identifier"},
+        "scope": {"enum": ["user", "workspace", "custom"]},
+        "path": {"type": "string", "minLength": 1, "maxLength": 4000}
+      }
+    },
     "projectSource": {
       "type": "object",
       "additionalProperties": false,
