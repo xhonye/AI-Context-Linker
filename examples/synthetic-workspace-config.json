@@ -11,7 +11,12 @@
     {
       "id": "sample-project",
       "path": "synthetic-project",
+      "sensitivity": "public",
+      "cloud_visibility": "allow",
+      "redaction_profile": "standard",
+      "approved_summary": "A synthetic project used to demonstrate deterministic local context compilation.",
       "allow_files": ["README.md"],
+      "state_files": ["STATUS.md"],
       "observe_paths": ["tests"],
       "constraints": ["Only synthetic facts may be published."],
       "code_relationship_scan": false,
@@ -19,12 +24,17 @@
       "open_questions": ["Which additional metadata adapters should be supported?"]
     }
   ],
+  "review_state_files": ["synthetic-review-state-v02.json"],
+  "session_summary_files": ["synthetic-session-summary.json"],
   "skill_roots": [
     {
       "id": "synthetic-agent-skills",
       "provider": "agent-skills",
       "scope": "workspace",
-      "path": "synthetic-skills"
+      "path": "synthetic-skills",
+      "approved_summaries": {
+        "sample-skill": "Summarizes synthetic project facts for a safe demonstration."
+      }
     }
   ],
   "relationships": []

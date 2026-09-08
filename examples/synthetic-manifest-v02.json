@@ -1,0 +1,96 @@
+{
+  "schema_version": "0.2",
+  "generated_at": "2026-08-28T12:00:00+08:00",
+  "workspace": {
+    "name": "Synthetic action workspace",
+    "summary": "A path-free synthetic example of the v0.2 action-context contract.",
+    "current_focus": "Validate the approved action slice and relationship layers.",
+    "decisions": ["Only synthetic approved facts are present."],
+    "unknowns": ["Real-world adoption is unknown."]
+  },
+  "projects": [
+    {
+      "id": "sample-project",
+      "name": "Sample Project",
+      "summary": "Builds a deterministic synthetic context package.",
+      "status": "unknown; approved activity is stored in StateRecord",
+      "sensitivity": "public",
+      "cloud_visibility": "allow",
+      "redaction_profile": "standard",
+      "signals": [],
+      "constraints": ["The example must remain synthetic and path-free."],
+      "risks": [],
+      "open_questions": [],
+      "state_items": [
+        {
+          "record_id": "state-0000000000000099",
+          "kind": "priority",
+          "text": "P0",
+          "status": "open",
+          "source_kind": "approved-review",
+          "source_ref": "sample-project:approved-review:priority",
+          "observed_at": "2026-08-28T09:00:00+08:00",
+          "expires_at": "2026-09-04T09:00:00+08:00",
+          "supersedes": [],
+          "freshness": "current",
+          "evidence": "sample-project:approved-review:priority",
+          "provenance": "approved-review"
+        },
+        {
+          "record_id": "state-0000000000000100",
+          "kind": "attention",
+          "text": "today",
+          "status": "open",
+          "source_kind": "approved-review",
+          "source_ref": "sample-project:approved-review:attention",
+          "observed_at": "2026-08-28T09:00:00+08:00",
+          "expires_at": "2026-09-04T09:00:00+08:00",
+          "supersedes": [],
+          "freshness": "current",
+          "evidence": "sample-project:approved-review:attention",
+          "provenance": "approved-review"
+        },
+        {
+          "record_id": "state-0000000000000101",
+          "kind": "next-action",
+          "text": "Run the synthetic v0.2 evaluation suite.",
+          "status": "open",
+          "source_kind": "approved-review",
+          "source_ref": "sample-project:approved-review:next-action",
+          "observed_at": "2026-08-28T09:00:00+08:00",
+          "expires_at": "2026-09-04T09:00:00+08:00",
+          "supersedes": [],
+          "freshness": "current",
+          "evidence": "sample-project:approved-review:next-action",
+          "provenance": "approved-review"
+        }
+      ],
+      "evidence": ["sample-project:synthetic:project-card"]
+    },
+    {
+      "id": "sample-dependency",
+      "name": "Sample Dependency",
+      "summary": "Provides a synthetic dependency endpoint.",
+      "status": "unknown",
+      "sensitivity": "public",
+      "cloud_visibility": "allow",
+      "redaction_profile": "standard",
+      "signals": [],
+      "constraints": [],
+      "risks": [],
+      "open_questions": [],
+      "state_items": [],
+      "evidence": ["sample-dependency:synthetic:project-card"]
+    }
+  ],
+  "relationships": [
+    {
+      "source": "sample-project",
+      "target": "sample-dependency",
+      "type": "blocked-by",
+      "layer": "observed",
+      "summary": "The synthetic main project is blocked by the synthetic dependency.",
+      "evidence": "sample-project:approved-review:blocker"
+    }
+  ]
+}

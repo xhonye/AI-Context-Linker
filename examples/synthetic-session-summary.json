@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1",
+  "project_id": "sample-project",
+  "session_date": "2026-08-28",
+  "completed_work": [
+    "Added a bounded project-state example."
+  ],
+  "blockers": [],
+  "next_actions": [
+    {
+      "text": "Run the synthetic scan and review the focused question slice.",
+      "evidence": "STATUS.md:line-9"
+    }
+  ],
+  "unresolved_questions": [
+    "Does the briefing contain enough evidence for a useful next-step discussion?"
+  ]
+}

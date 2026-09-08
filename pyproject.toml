@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-context-linker"
-version = "0.2.0"
+version = "0.2.5"
 description = "Give ChatGPT a privacy-safe, reviewable map of local projects."
 readme = "README.md"
 license = "MIT"
@@ -18,7 +18,7 @@ Repository = "https://github.com/xhonye/AI-Context-Linker.git"
 Issues = "https://github.com/xhonye/AI-Context-Linker/issues"
 
 [project.optional-dependencies]
-dev = ["jsonschema>=4.23", "pytest>=8"]
+dev = ["build>=1", "jsonschema>=4.23", "pytest>=8", "setuptools>=77"]
 
 [project.scripts]
 ai-context-linker = "ai_context_linker.cli:main"

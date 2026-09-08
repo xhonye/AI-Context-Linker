@@ -8,9 +8,16 @@ AI Context Linker grew out of a private dogfooding prototype named
 project briefing, synchronized through a dedicated folder, lets ordinary
 ChatGPT discuss a local multi-project workspace without receiving the repos.
 
-The open-source implementation now replaces the prototype for this
-ChatGPT/Drive strategic-discussion use case. The prototype remains a temporary
-rollback and audit reference; Linker does not depend on it at runtime.
+This document records the 2026-08-16 fact-family migration audit. A later
+2026-08-27 live comparison found that the open-source implementation had not
+yet reached action-oriented parity for “what should I advance today,” “where
+is the project blocked,” and “what is the next action.” That finding drove the
+v0.2 action contract: explicit approved review state, lifecycle resolution,
+approved snapshot history, semantic diff, fixed priority slicing, and layered
+relationships are now implemented and pass the synthetic gold suite. Real
+same-model A/B parity has not yet been rerun with approved v0.2 action state,
+so the prototype remains the action-context benchmark until the
+[`sol-context parity plan`](sol-context-parity-plan.md) exit gate passes.
 
 ## What was compared
 
@@ -77,10 +84,10 @@ secret-pattern hits. Default scans still read zero source-code bodies.
 
 | Question | Result |
 |---|---|
-| What should I advance today? | No material loss. Projects retain summaries, Git/activity facts, approved constraints, and an explicit warning that activity is not value. Priority remains an AI inference. |
-| What is the next step for every project? | Honest limitation. Each snapshot has an explicit actionable item for only one project; Linker preserves unknowns instead of inventing the other plans. |
-| Which projects overlap or may be merged? | No material loss for evidence-backed dependencies. All four prototype strong edges are recovered, with additional reviewable candidates. Shared-dataset inference remains intentionally omitted. |
-| What facts changed recently? | Improved. The comparison view has its own hash, records added, removed, and changed facts, and cannot alter the identity of the underlying fact snapshot. |
+| What should I advance today? | V0.2 now selects at most three main projects from approved P0/P1 priority, attention, deadlines, blockers, and active projects with approved next actions, then explains omissions. The synthetic contract passes; real parity remains unverified until current review state is approved and the same-model A/B is rerun. |
+| What is the next step for every project? | V0.2 transfers approved next actions and outputs unknown when none exists. It does not infer a next action from Git activity or broad goals. |
+| Which projects overlap or may be merged? | Observed and approved-semantic layers are formal; AI merge proposals remain in a private review queue. Exact root references are now correctly labeled `scans-or-indexes`, not dependencies. |
+| What facts changed recently? | Improved. Stable StateRecord lifecycle and semantic diff cover goals, next actions, blockers, deadlines, projects, and relationships; source disappearance becomes needs-review instead of resolved. |
 
 ## Accepted tradeoffs
 
@@ -88,4 +95,6 @@ secret-pattern hits. Default scans still read zero source-code bodies.
 - Broad agent instructions are not copied as project constraints.
 - Optional code-path relationships are review candidates, not automatic truth.
 - Drive receives only the generated publication layer, never the repositories.
+- Every newly discovered project defaults to `deny`; `summary-only` publishes only an explicitly approved summary.
+- Raw Skill descriptions are audited as untrusted input and never copied into the publication layer.
 - `sol-context` remains available only as a temporary rollback reference.

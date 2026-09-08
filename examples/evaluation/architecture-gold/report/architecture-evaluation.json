@@ -1,0 +1,50 @@
+{
+  "schema_version": "0.2",
+  "suite": "architecture-index",
+  "metrics": {
+    "modules": {
+      "actual": 5,
+      "expected": 5,
+      "true_positive": 5,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "symbols": {
+      "actual": 7,
+      "expected": 7,
+      "true_positive": 7,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "test_modules": {
+      "actual": 1,
+      "expected": 1,
+      "true_positive": 1,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "internal_calls": {
+      "actual": 3,
+      "expected": 3,
+      "true_positive": 3,
+      "precision": 1.0,
+      "recall": 1.0
+    }
+  },
+  "evidence_coverage": 1.0,
+  "configured_privacy_leaks": 0,
+  "parse_failures": 0,
+  "truncated": false,
+  "map_sha256": "e5883d6a405b1a86050f7a52081071d3928dba59ead3aadccd50f545067273cd",
+  "gates": {
+    "module_recall_at_least_95": true,
+    "symbol_recall_at_least_95": true,
+    "test_module_recall_100": true,
+    "internal_call_precision_at_least_95": true,
+    "structural_evidence_coverage_100": true,
+    "configured_privacy_leaks_zero": true,
+    "source_bodies_published_zero": true,
+    "deterministic_output_100": true
+  },
+  "all_gates_pass": true
+}

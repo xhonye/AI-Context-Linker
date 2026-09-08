@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Context Linker private relationship candidates",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "candidates"],
+  "properties": {
+    "schema_version": {"const": "0.2"},
+    "candidates": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "source", "target", "type", "summary"],
+        "properties": {
+          "candidate_id": {"$ref": "context-manifest.schema.json#/$defs/identifier"},
+          "source": {"$ref": "context-manifest.schema.json#/$defs/identifier"},
+          "target": {"$ref": "context-manifest.schema.json#/$defs/identifier"},
+          "type": {"enum": ["overlaps-with", "alternative-to", "replaces", "complements", "candidate-merge", "separate-by-design"]},
+          "summary": {"$ref": "context-manifest.schema.json#/$defs/safeString"}
+        }
+      }
+    }
+  }
+}

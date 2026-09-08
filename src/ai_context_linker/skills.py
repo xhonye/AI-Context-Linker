@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from .adapters import is_link_or_reparse
 from .core import ManifestError, validate_skill_summary
@@ -13,6 +13,7 @@ from .core import ManifestError, validate_skill_summary
 
 MAX_SKILL_FRONTMATTER_BYTES = 16 * 1024
 MAX_SKILLS_PER_ROOT = 500
+WITHHELD_SKILL_SUMMARY = "Capability summary withheld pending explicit human approval."
 
 
 def default_user_skill_roots(home: Path | None = None) -> list[dict[str, str]]:
@@ -134,8 +135,10 @@ def collect_skill_root(
     root_id: str,
     provider: str,
     scope: str,
+    approved_summaries: Mapping[str, str] | None = None,
 ) -> tuple[list[dict[str, str]], dict[str, Any]]:
-    """Collect Skill names and summaries from direct child directories only."""
+    """Collect Skill names plus only explicitly approved neutral summaries."""
+    approved_summaries = approved_summaries or {}
     report: dict[str, Any] = {
         "id": root_id,
         "provider": provider,
@@ -145,6 +148,9 @@ def collect_skill_root(
         "skills_collected": 0,
         "skipped": [],
         "instruction_bodies_read": 0,
+        "raw_summaries_withheld": 0,
+        "approved_summaries_used": 0,
+        "instruction_injection_findings": 0,
     }
     if not root.exists():
         return [], report
@@ -175,15 +181,36 @@ def collect_skill_root(
             continue
         declared_name, description = parsed
         name = (declared_name or child.name).strip()[:200]
-        summary = (description or "No public Skill summary is declared.").strip()[:1000]
-        validate_skill_summary(name, f"skill_roots.{root_id}.{child.name}.name")
         try:
-            validate_skill_summary(summary, f"skill_roots.{root_id}.{child.name}.summary")
+            validate_skill_summary(name, f"skill_roots.{root_id}.{child.name}.name")
         except ManifestError as exc:
             if "likely secret" in str(exc):
                 raise
-            summary = "Summary omitted because it failed publish-safety checks."
-            report["skipped"].append({"entry": child.name, "reason": "unsafe summary omitted"})
+            report["skipped"].append({"entry": child.name, "reason": "unsafe Skill name omitted"})
+            if "instruction-like" in str(exc):
+                report["instruction_injection_findings"] += 1
+            continue
+
+        raw_summary = (description or "").strip()[:1000]
+        if raw_summary:
+            report["raw_summaries_withheld"] += 1
+            try:
+                validate_skill_summary(raw_summary, f"skill_roots.{root_id}.{child.name}.raw_summary")
+            except ManifestError as exc:
+                if "likely secret" in str(exc):
+                    raise
+                report["skipped"].append({"entry": child.name, "reason": "unsafe raw summary withheld"})
+                if "instruction-like" in str(exc):
+                    report["instruction_injection_findings"] += 1
+
+        summary = WITHHELD_SKILL_SUMMARY
+        evidence = f"skill-name-only:{provider}:{scope}"
+        approved_summary = approved_summaries.get(name)
+        if approved_summary is not None:
+            summary = approved_summary.strip()[:1000]
+            validate_skill_summary(summary, f"skill_roots.{root_id}.{child.name}.approved_summary")
+            report["approved_summaries_used"] += 1
+            evidence = f"skill-approved-summary:{provider}:{scope}"
         skills.append(
             {
                 "source": root_id,
@@ -191,7 +218,7 @@ def collect_skill_root(
                 "scope": scope,
                 "name": name,
                 "summary": summary,
-                "evidence": f"skill-frontmatter:{provider}:{scope}",
+                "evidence": evidence,
             }
         )
     report["truncated"] = len(children) > MAX_SKILLS_PER_ROOT

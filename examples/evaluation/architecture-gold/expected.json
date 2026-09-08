@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.2",
+  "project_id": "architecture-gold",
+  "mode": "modules-symbols",
+  "modules": [
+    "src/app.py",
+    "src/helpers.py",
+    "tests/test_app.py",
+    "web/format.ts",
+    "web/view.ts"
+  ],
+  "symbols": [
+    "src/app.py::Coordinator",
+    "src/app.py::Coordinator.coordinate",
+    "src/app.py::run",
+    "src/helpers.py::helper",
+    "tests/test_app.py::test_run",
+    "web/format.ts::formatValue",
+    "web/view.ts::renderValue"
+  ],
+  "test_modules": ["tests/test_app.py"],
+  "internal_calls": [
+    "src/app.py->src/helpers.py::helper",
+    "tests/test_app.py->src/app.py::run",
+    "web/view.ts->web/format.ts::formatValue"
+  ],
+  "forbidden_output_tokens": [
+    "must-not-enter-architecture-output",
+    "ignored_generated_function",
+    "hidden_tool_state",
+    "stale_installed_copy",
+    "sample_only",
+    "append",
+    "trim"
+  ]
+}

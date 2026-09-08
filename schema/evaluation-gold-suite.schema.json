@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Context Linker synthetic v0.2 gold evaluation suite",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "observed_at", "cases"],
+  "properties": {
+    "schema_version": {"const": "0.2"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "covers", "projects", "expected"],
+        "properties": {
+          "id": {"$ref": "context-manifest.schema.json#/$defs/identifier"},
+          "covers": {"type": "array", "minItems": 1, "items": {"$ref": "context-manifest.schema.json#/$defs/identifier"}},
+          "projects": {"type": "array", "minItems": 1},
+          "previous_projects": {"type": "array", "minItems": 1},
+          "workspace_summary": {"type": "string"},
+          "relationships": {"type": "array"},
+          "documents": {"type": "object"},
+          "expected": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

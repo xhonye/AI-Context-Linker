@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "projects": [
+    {
+      "project_id": "sample-project",
+      "status": "active",
+      "current_goal": "Preserve the approved synthetic workflow.",
+      "next_action": "Migrate this review state to schema v0.2.",
+      "blockers": [],
+      "updated_at": "2026-08-27T10:00:00+08:00"
+    }
+  ]
+}

@@ -1,0 +1,168 @@
+{
+  "schema_version": "0.2",
+  "observed_at": "2026-08-28T12:00:00+08:00",
+  "cases": [
+    {
+      "id": "blocker-resolved",
+      "covers": ["blocker-open-to-resolved"],
+      "projects": [
+        {"id": "work", "records": [{"record_id": "state-0000000000000001", "kind": "blocker", "text": "Waiting for review.", "status": "resolved"}]}
+      ],
+      "previous_projects": [
+        {"id": "work", "records": [{"record_id": "state-0000000000000001", "kind": "blocker", "text": "Waiting for review.", "status": "open"}]}
+      ],
+      "expected": {
+        "resolved_blockers": ["work|state-0000000000000001"],
+        "semantic_changes": ["state|work|blocker|state-0000000000000001|status|open->resolved"]
+      }
+    },
+    {
+      "id": "blocker-superseded",
+      "covers": ["blocker-superseded"],
+      "projects": [
+        {"id": "work", "records": [{"record_id": "state-0000000000000002", "kind": "blocker", "text": "Waiting for the revised contract.", "status": "open", "supersedes": ["state-0000000000000001"]}]}
+      ],
+      "previous_projects": [
+        {"id": "work", "records": [{"record_id": "state-0000000000000001", "kind": "blocker", "text": "Waiting for the old contract.", "status": "open"}]}
+      ],
+      "expected": {
+        "open_blockers": ["work|state-0000000000000002"],
+        "resolved_blockers": ["work|state-0000000000000001"],
+        "priority_main": ["work"],
+        "semantic_changes": [
+          "state|work|blocker|state-0000000000000001|status|open->superseded",
+          "state|work|blocker|state-0000000000000002|added"
+        ]
+      }
+    },
+    {
+      "id": "broad-goal",
+      "covers": ["broad-goal-no-next-action"],
+      "projects": [
+        {"id": "strategy", "records": [{"record_id": "state-0000000000000010", "kind": "current-goal", "text": "Improve the whole product.", "status": "open"}]}
+      ],
+      "expected": {}
+    },
+    {
+      "id": "deadline",
+      "covers": ["deadline"],
+      "projects": [
+        {"id": "deadline-project", "records": [{"record_id": "state-0000000000000020", "kind": "deadline", "text": "2026-08-29", "status": "open"}]}
+      ],
+      "expected": {"priority_main": ["deadline-project"]}
+    },
+    {
+      "id": "human-priority",
+      "covers": ["human-priority"],
+      "projects": [
+        {
+          "id": "p0-project",
+          "records": [
+            {"record_id": "state-0000000000000021", "kind": "priority", "text": "P0", "status": "open"},
+            {"record_id": "state-0000000000000022", "kind": "next-action", "text": "Run the P0 acceptance fixture.", "status": "open"}
+          ]
+        },
+        {
+          "id": "today-project",
+          "records": [
+            {"record_id": "state-0000000000000023", "kind": "attention", "text": "today", "status": "open"}
+          ]
+        }
+      ],
+      "expected": {
+        "approved_next_actions": ["Run the P0 acceptance fixture."],
+        "priority_main": ["p0-project", "today-project"]
+      }
+    },
+    {
+      "id": "dependency-endpoint",
+      "covers": ["dependency-endpoint"],
+      "projects": [
+        {
+          "id": "main-project",
+          "records": [
+            {"record_id": "state-0000000000000030", "kind": "attention", "text": "today", "status": "open"},
+            {"record_id": "state-0000000000000031", "kind": "activity", "text": "active", "status": "open"},
+            {"record_id": "state-0000000000000032", "kind": "blocker", "text": "Waiting for dependency-project.", "status": "open"},
+            {"record_id": "state-0000000000000033", "kind": "next-action", "text": "Run the approved end-to-end fixture.", "status": "open"}
+          ]
+        },
+        {"id": "dependency-project", "records": []}
+      ],
+      "relationships": [
+        {"source": "main-project", "target": "dependency-project", "type": "blocked-by", "layer": "observed", "summary": "The main project is blocked by the dependency project.", "evidence": "main-project:approved-review:blocker"}
+      ],
+      "expected": {
+        "approved_next_actions": ["Run the approved end-to-end fixture."],
+        "open_blockers": ["main-project|state-0000000000000032"],
+        "priority_main": ["main-project"],
+        "dependency_endpoints": ["dependency-project"],
+        "published_relationships": ["main-project|blocked-by|dependency-project"]
+      }
+    },
+    {
+      "id": "sensitive-input",
+      "covers": ["sensitive-path-secret-injection"],
+      "workspace_summary": "Read C:/Users/example/private and api_key=sk-example0123456789012345.",
+      "projects": [{"id": "unsafe", "records": []}],
+      "expected": {"privacy_rejected": true}
+    },
+    {
+      "id": "same-name",
+      "covers": ["same-name-false-positive"],
+      "projects": [{"id": "source-project", "records": []}, {"id": "target-project", "records": []}],
+      "documents": {"source-project": {"README.md": "Target-project is an ordinary prose name and must not create a relationship."}},
+      "expected": {}
+    },
+    {
+      "id": "separate-design",
+      "covers": ["separate-by-design"],
+      "projects": [{"id": "private-core", "records": []}, {"id": "public-tool", "records": []}],
+      "relationships": [
+        {"source": "private-core", "target": "public-tool", "type": "separate-by-design", "layer": "approved-semantic", "summary": "The projects intentionally preserve different trust boundaries.", "evidence": "approved-review:relationship:separate-design"}
+      ],
+      "expected": {"published_relationships": ["private-core|separate-by-design|public-tool"]}
+    },
+    {
+      "id": "ai-merge-candidate",
+      "covers": ["unapproved-ai-merge-candidate"],
+      "projects": [{"id": "first-project", "records": []}, {"id": "second-project", "records": []}],
+      "relationships": [
+        {"source": "first-project", "target": "second-project", "type": "candidate-merge", "layer": "ai-candidate", "summary": "AI suggests reviewing a possible merge.", "evidence": "ai-candidate:merge-review"}
+      ],
+      "expected": {}
+    },
+    {
+      "id": "no-previous",
+      "covers": ["no-previous-snapshot"],
+      "projects": [{"id": "baseline", "records": []}],
+      "expected": {"baseline_available": false}
+    },
+    {
+      "id": "disappeared-source",
+      "covers": ["disappeared-source"],
+      "projects": [{"id": "work", "records": []}],
+      "previous_projects": [
+        {"id": "work", "records": [{"record_id": "state-0000000000000040", "kind": "blocker", "text": "Waiting for evidence.", "status": "open"}]}
+      ],
+      "expected": {
+        "resolved_blockers": ["work|state-0000000000000040"],
+        "semantic_changes": ["state|work|blocker|state-0000000000000040|status|open->needs_review"]
+      }
+    },
+    {
+      "id": "stale-approved",
+      "covers": ["stale-approved-state"],
+      "projects": [
+        {
+          "id": "stale-project",
+          "records": [
+            {"record_id": "state-0000000000000050", "kind": "attention", "text": "today", "status": "open", "observed_at": "2026-08-01T12:00:00+08:00", "expires_at": "2026-08-15T12:00:00+08:00"},
+            {"record_id": "state-0000000000000051", "kind": "next-action", "text": "This expired action must not transfer.", "status": "open", "observed_at": "2026-08-01T12:00:00+08:00", "expires_at": "2026-08-15T12:00:00+08:00"}
+          ]
+        }
+      ],
+      "expected": {}
+    }
+  ]
+}

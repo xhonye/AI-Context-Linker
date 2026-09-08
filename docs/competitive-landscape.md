@@ -1,6 +1,6 @@
 # Automation and graph-tool landscape
 
-> Competitors reviewed 2026-08-12; the Linker row was updated 2026-08-16.
+> Competitors reviewed 2026-08-12; the Linker row was updated 2026-08-29.
 > Percentages are our estimates against the same workflow stages, not metrics
 > published by the compared projects.
 
@@ -14,7 +14,7 @@ without publishing source-code bodies.
 | [CodeGraph](https://github.com/codegraph-ai/CodeGraph) | 90–95% | 0% in graph-only mode | Repository source code | Functions, imports, calls and PR blast radius |
 | [Microsoft GraphRAG](https://microsoft.github.io/graphrag/index/overview/) | 85–95% | Required by the standard entity, relationship and summary pipeline | Supplied unstructured text | General LLM-built RAG graph and community summaries |
 | [Graphiti](https://help.getzep.com/graphiti/getting-started/welcome) | 85–95% | Required in the normal episode-ingestion path | Text, messages and JSON episodes | Temporal agent memory with incremental updates |
-| AI Context Linker | About 90% from explicit workspace roots; 100% from an approved manifest | 0% | Metadata by default; bounded code/config reads only for per-project opt-in relationship discovery | Human-reviewed, cloud-safe project briefing for ordinary ChatGPT |
+| AI Context Linker | About 90% from explicit workspace roots; 100% from an approved manifest | 0% | Default deny; explicitly allowed metadata or an approved summary only; source syntax is read only for separate per-project relationship or Architecture Index opt-ins and is never published as text | Human-reviewed, cloud-safe project briefing for ordinary ChatGPT |
 
 ## Why not claim 100% end to end?
 

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Context Linker neutral sanitized session summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "project_id", "session_date"],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "project_id": {"$ref": "context-manifest.schema.json#/$defs/identifier"},
+    "session_date": {"type": "string", "format": "date"},
+    "completed_work": {"$ref": "#/$defs/items"},
+    "decisions": {"$ref": "#/$defs/items"},
+    "blockers": {"$ref": "#/$defs/items"},
+    "next_actions": {"$ref": "#/$defs/items"},
+    "unresolved_questions": {"$ref": "#/$defs/items"}
+  },
+  "$defs": {
+    "items": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "oneOf": [
+          {"type": "string", "minLength": 1, "maxLength": 500},
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text"],
+            "properties": {
+              "text": {"type": "string", "minLength": 1, "maxLength": 500},
+              "evidence": {"type": "string", "minLength": 1, "maxLength": 4000}
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "0.2",
+  "projects": [
+    {
+      "project_id": "sample-project",
+      "priority": "P0",
+      "activity": "active",
+      "attention": "today",
+      "why_now": "The synthetic acceptance check is due soon.",
+      "current_goal": "Validate the complete action-context contract.",
+      "next_action": "Run the synthetic end-to-end scan.",
+      "done_when": "All deterministic gates pass.",
+      "owner": "maintainer",
+      "due_at": "2026-08-30",
+      "blockers": ["Waiting for the synthetic dependency fixture."],
+      "updated_at": "2026-08-28T09:00:00+08:00",
+      "expires_at": "2026-09-04T09:00:00+08:00"
+    }
+  ]
+}

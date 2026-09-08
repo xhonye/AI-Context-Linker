@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Context Linker private parity-evaluation scorecard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "evaluation_id", "model", "project_set", "conditions", "questions"],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "evaluation_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,99}$"},
+    "model": {"type": "string", "minLength": 1, "maxLength": 200},
+    "project_set": {"type": "string", "minLength": 1, "maxLength": 200},
+    "conditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["full_workspace", "linker"],
+      "properties": {
+        "full_workspace": {"$ref": "#/$defs/condition"},
+        "linker": {"$ref": "#/$defs/condition"}
+      }
+    },
+    "questions": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {"$ref": "#/$defs/question"}
+    }
+  },
+  "$defs": {
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["local_access", "full_context_budget", "bundle_only"],
+      "properties": {
+        "local_access": {"type": "boolean"},
+        "full_context_budget": {"type": "boolean"},
+        "bundle_only": {"type": "boolean"}
+      }
+    },
+    "rating": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "note"],
+      "properties": {
+        "score": {"type": "integer", "minimum": 0, "maximum": 4},
+        "note": {"type": "string", "minLength": 1, "maxLength": 4000}
+      }
+    },
+    "pairedRating": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["full_workspace", "linker"],
+      "properties": {
+        "full_workspace": {"$ref": "#/$defs/rating"},
+        "linker": {"$ref": "#/$defs/rating"}
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text", "answers", "ratings", "material_loss", "notes"],
+      "properties": {
+        "id": {"enum": ["advance-today", "active-blockers", "next-actions", "relationships", "snapshot-changes"]},
+        "text": {"type": "string", "minLength": 1, "maxLength": 500},
+        "answers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["full_workspace", "linker"],
+          "properties": {
+            "full_workspace": {"type": "string", "minLength": 1, "maxLength": 1000},
+            "linker": {"type": "string", "minLength": 1, "maxLength": 1000}
+          }
+        },
+        "ratings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["factual_grounding", "current_state_freshness", "blocker_recall", "next_action_recall", "relationship_usefulness", "uncertainty_discipline"],
+          "properties": {
+            "factual_grounding": {"$ref": "#/$defs/pairedRating"},
+            "current_state_freshness": {"$ref": "#/$defs/pairedRating"},
+            "blocker_recall": {"$ref": "#/$defs/pairedRating"},
+            "next_action_recall": {"$ref": "#/$defs/pairedRating"},
+            "relationship_usefulness": {"$ref": "#/$defs/pairedRating"},
+            "uncertainty_discipline": {"$ref": "#/$defs/pairedRating"}
+          }
+        },
+        "material_loss": {"type": "boolean"},
+        "notes": {"type": "string", "minLength": 1, "maxLength": 4000}
+      }
+    }
+  }
+}

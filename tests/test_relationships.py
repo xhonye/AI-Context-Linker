@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from ai_context_linker.relationships import (
     derive_code_path_relationships,
     derive_dependency_relationships,
@@ -31,8 +33,9 @@ def test_code_path_relationships_are_opt_in_bounded_and_do_not_publish_source(tm
         {
             "source": "source",
             "target": "target",
-            "type": "code-path-dependency",
-            "summary": "Allowlisted local code/config references the approved root of `target`.",
+            "type": "scans-or-indexes",
+            "layer": "observed",
+            "summary": "Allowlisted local code/config references the approved root of `target`; this is an indexing or scan relationship, not runtime dependency proof.",
             "evidence": "source:code-path:config.py:line-1",
         }
     ]
@@ -126,9 +129,9 @@ def test_pyproject_relationship_requires_unique_declared_identity(tmp_path: Path
             "source": {
                 "identities": identities,
                 "dependencies": dependencies,
-                "dependency_sources": {name: {"pyproject.toml"} for name in dependencies},
+                "dependency_sources": {(kind, name): {"pyproject.toml"} for kind, names in dependencies.items() for name in names},
             },
-            "target": {"identities": target_identities, "dependencies": set(), "dependency_sources": {}},
+            "target": {"identities": target_identities, "dependencies": {}, "dependency_sources": {}},
         }
     )
 
@@ -136,7 +139,8 @@ def test_pyproject_relationship_requires_unique_declared_identity(tmp_path: Path
         {
             "source": "source",
             "target": "target",
-            "type": "declared-dependency",
+            "type": "runtime-dependency",
+            "layer": "observed",
             "summary": "Structured dependency metadata declares a dependency on `target`.",
             "evidence": "source:dependency-metadata:pyproject.toml:target",
         }
@@ -160,6 +164,7 @@ def test_document_reference_requires_code_or_link_markup() -> None:
         ("target-project", "document-reference"),
         ("other-project", "document-reference"),
     ]
+    assert all(item["layer"] == "observed" for item in relationships)
     assert relationships[0]["evidence"] == "source-project:file:README.md:line-2"
 
 
@@ -167,11 +172,11 @@ def test_ambiguous_dependency_identity_does_not_create_edge() -> None:
     metadata = {
         "source": {
             "identities": {"source"},
-            "dependencies": {"shared"},
-            "dependency_sources": {"shared": {"package.json"}},
+            "dependencies": {"runtime-dependency": {"shared"}},
+            "dependency_sources": {("runtime-dependency", "shared"): {"package.json"}},
         },
-        "first": {"identities": {"shared"}, "dependencies": set(), "dependency_sources": {}},
-        "second": {"identities": {"shared"}, "dependencies": set(), "dependency_sources": {}},
+        "first": {"identities": {"shared"}, "dependencies": {}, "dependency_sources": {}},
+        "second": {"identities": {"shared"}, "dependencies": {}, "dependency_sources": {}},
     }
 
     assert derive_dependency_relationships(metadata) == []
@@ -194,3 +199,38 @@ def test_repeated_reference_fragment_is_identified_as_template_noise() -> None:
         {"first", "shared-governance"},
         ignored_fragments=ignored,
     ) == []
+
+
+@pytest.mark.parametrize(
+    ("filename", "source"),
+    [("package.json", '{"name":"source","devDependencies":{"target":"*"}}'),
+     ("Cargo.toml", '[package]\nname = "source"\n[dev-dependencies]\ntarget = "1"\n'),
+     ("Cargo.toml", '[package]\nname = "source"\n[build-dependencies]\ntarget = "1"\n')],
+)
+def test_development_dependencies_are_not_runtime_edges(tmp_path: Path, filename: str, source: str) -> None:
+    path = tmp_path / filename
+    path.write_text(source, encoding="utf-8")
+    identities, dependencies = parse_dependency_metadata(path)
+    edges = derive_dependency_relationships({
+        "source": {"identities": identities, "dependencies": dependencies},
+        "target": {"identities": {"target"}},
+    })
+    assert [(edge["target"], edge["type"]) for edge in edges] == [("target", "build-dependency")]
+
+
+@pytest.mark.parametrize(
+    ("filename", "source"),
+    [("pyproject.toml", 'project = "invalid"'), ("Cargo.toml", 'package = []')],
+)
+def test_invalid_dependency_metadata_shape_is_a_parse_error(tmp_path: Path, filename: str, source: str) -> None:
+    path = tmp_path / filename
+    path.write_text(source, encoding="utf-8")
+    with pytest.raises(ValueError):
+        parse_dependency_metadata(path)
+
+
+def test_python_optional_groups_remain_runtime_dependencies(tmp_path: Path) -> None:
+    path = tmp_path / "pyproject.toml"
+    path.write_text('[project]\nname="source"\n[project.optional-dependencies]\ndev=["target"]\n', encoding="utf-8")
+    _, dependencies = parse_dependency_metadata(path)
+    assert dependencies == {"runtime-dependency": {"target"}}

@@ -29,50 +29,64 @@ def _python_dependency_name(value: str) -> str | None:
     return _package_key(match.group(1)) if match else None
 
 
-def _parse_pyproject(raw: bytes) -> tuple[set[str], set[str]]:
+def _parse_pyproject(raw: bytes) -> tuple[set[str], dict[str, set[str]]]:
     data = tomllib.loads(raw.decode("utf-8"))
-    project = data.get("project", {}) if isinstance(data, dict) else {}
+    project = data.get("project", {})
+    if not isinstance(project, dict):
+        raise ValueError("pyproject project must be a table")
     identities = {_package_key(project["name"])} if isinstance(project.get("name"), str) else set()
+    declared = project.get("dependencies", [])
+    optional = project.get("optional-dependencies", {})
+    if not isinstance(declared, list) or not isinstance(optional, dict):
+        raise ValueError("pyproject dependencies must be an array and optional-dependencies a table")
     dependencies: set[str] = set()
-    for value in project.get("dependencies", []) if isinstance(project, dict) else []:
-        if isinstance(value, str) and (name := _python_dependency_name(value)):
-            dependencies.add(name)
-    optional = project.get("optional-dependencies", {}) if isinstance(project, dict) else {}
-    if isinstance(optional, dict):
-        for values in optional.values():
-            if isinstance(values, list):
-                for value in values:
-                    if isinstance(value, str) and (name := _python_dependency_name(value)):
-                        dependencies.add(name)
-    return identities, dependencies
+    # Python extras remain optional runtime requirements, even when named "dev".
+    for values in [declared, *optional.values()]:
+        if not isinstance(values, list):
+            raise ValueError("pyproject dependency groups must be arrays")
+        for value in values:
+            if isinstance(value, str) and (name := _python_dependency_name(value)):
+                dependencies.add(name)
+    return identities, {"runtime-dependency": dependencies}
 
 
-def _parse_package_json(raw: bytes) -> tuple[set[str], set[str]]:
+def _dependency_groups(data: dict[str, Any], sections: dict[str, str]) -> dict[str, set[str]]:
+    groups: dict[str, set[str]] = {}
+    for section, kind in sections.items():
+        values = data.get(section, {})
+        if not isinstance(values, dict):
+            raise ValueError(f"dependency section {section} must be an object or table")
+        groups.setdefault(kind, set()).update(_package_key(name) for name in values)
+    return groups
+
+
+def _parse_package_json(raw: bytes) -> tuple[set[str], dict[str, set[str]]]:
     data = json.loads(raw.decode("utf-8"))
     if not isinstance(data, dict):
         raise ValueError("package.json root must be an object")
     identities = {_package_key(data["name"])} if isinstance(data.get("name"), str) else set()
-    dependencies: set[str] = set()
-    for section in ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies"):
-        values = data.get(section, {})
-        if isinstance(values, dict):
-            dependencies.update(_package_key(name) for name in values if isinstance(name, str))
-    return identities, dependencies
+    return identities, _dependency_groups(data, {
+        "dependencies": "runtime-dependency",
+        "peerDependencies": "runtime-dependency",
+        "optionalDependencies": "runtime-dependency",
+        "devDependencies": "build-dependency",
+    })
 
 
-def _parse_cargo(raw: bytes) -> tuple[set[str], set[str]]:
+def _parse_cargo(raw: bytes) -> tuple[set[str], dict[str, set[str]]]:
     data = tomllib.loads(raw.decode("utf-8"))
-    package = data.get("package", {}) if isinstance(data, dict) else {}
+    package = data.get("package", {})
+    if not isinstance(package, dict):
+        raise ValueError("Cargo package must be a table")
     identities = {_package_key(package["name"])} if isinstance(package.get("name"), str) else set()
-    dependencies: set[str] = set()
-    for section in ("dependencies", "dev-dependencies", "build-dependencies"):
-        values = data.get(section, {}) if isinstance(data, dict) else {}
-        if isinstance(values, dict):
-            dependencies.update(_package_key(name) for name in values if isinstance(name, str))
-    return identities, dependencies
+    return identities, _dependency_groups(data, {
+        "dependencies": "runtime-dependency",
+        "dev-dependencies": "build-dependency",
+        "build-dependencies": "build-dependency",
+    })
 
 
-def _parse_go_mod(raw: bytes) -> tuple[set[str], set[str]]:
+def _parse_go_mod(raw: bytes) -> tuple[set[str], dict[str, set[str]]]:
     text = raw.decode("utf-8")
     identities: set[str] = set()
     dependencies: set[str] = set()
@@ -91,10 +105,10 @@ def _parse_go_mod(raw: bytes) -> tuple[set[str], set[str]]:
             dependencies.add(_package_key(line.removeprefix("require ").split()[0]))
         elif in_require:
             dependencies.add(_package_key(line.split()[0]))
-    return identities, dependencies
+    return identities, {"runtime-dependency": dependencies}
 
 
-def parse_dependency_metadata(path: Path) -> tuple[set[str], set[str]]:
+def parse_dependency_metadata(path: Path) -> tuple[set[str], dict[str, set[str]]]:
     if path.stat().st_size > MAX_DEPENDENCY_METADATA_BYTES:
         raise ValueError(f"{path.name} exceeds dependency metadata size limit")
     raw = path.read_bytes()
@@ -118,27 +132,28 @@ def derive_dependency_relationships(
             identity_owners.setdefault(identity, set()).add(project_id)
 
     relationships: list[dict[str, str]] = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, str]] = set()
     for source, metadata in sorted(project_metadata.items()):
-        for dependency in sorted(metadata.get("dependencies", set())):
-            owners = identity_owners.get(dependency, set())
-            if len(owners) != 1:
-                continue
-            target = next(iter(owners))
-            if target == source or (source, target) in seen:
-                continue
-            seen.add((source, target))
-            source_files = sorted(metadata.get("dependency_sources", {}).get(dependency, []))
-            source_file = source_files[0] if source_files else "dependency-metadata"
-            relationships.append(
-                {
-                    "source": source,
-                    "target": target,
-                    "type": "declared-dependency",
-                    "summary": f"Structured dependency metadata declares a dependency on `{target}`.",
-                    "evidence": f"{source}:dependency-metadata:{source_file}:{target}",
-                }
-            )
+        for kind, dependencies in sorted(metadata.get("dependencies", {}).items()):
+            for dependency in sorted(dependencies):
+                owners = identity_owners.get(dependency, set())
+                if len(owners) != 1:
+                    continue
+                target = next(iter(owners))
+                if target == source or (source, target, kind) in seen:
+                    continue
+                seen.add((source, target, kind))
+                source_files = sorted(metadata.get("dependency_sources", {}).get((kind, dependency), []))
+                source_file = source_files[0] if source_files else "dependency-metadata"
+                summary = (
+                    f"Structured dependency metadata declares a development or build dependency on `{target}`."
+                    if kind == "build-dependency"
+                    else f"Structured dependency metadata declares a dependency on `{target}`."
+                )
+                relationships.append(
+                    {"source": source, "target": target, "type": kind, "layer": "observed",
+                     "summary": summary, "evidence": f"{source}:dependency-metadata:{source_file}:{target}"}
+                )
     return relationships
 
 
@@ -172,6 +187,7 @@ def derive_document_relationships(
                     "source": source_id,
                     "target": target,
                     "type": "document-reference",
+                    "layer": "observed",
                     "summary": f"Approved metadata explicitly references `{target}`; this is not dependency proof.",
                     "evidence": f"{source_id}:file:{filename}:line-{line_number}",
                 }
@@ -308,8 +324,9 @@ def derive_code_path_relationships(
                             {
                                 "source": source_id,
                                 "target": target_id,
-                                "type": "code-path-dependency",
-                                "summary": f"Allowlisted local code/config references the approved root of `{target_id}`.",
+                                "type": "scans-or-indexes",
+                                "layer": "observed",
+                                "summary": f"Allowlisted local code/config references the approved root of `{target_id}`; this is an indexing or scan relationship, not runtime dependency proof.",
                                 "evidence": f"{source_id}:code-path:{relative.as_posix()}:line-{line_number}",
                             }
                         )

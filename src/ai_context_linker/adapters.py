@@ -7,6 +7,7 @@ signals describe observable structure without claiming quality, usage, or value.
 from __future__ import annotations
 
 from collections import deque
+import stat
 from pathlib import Path
 
 
@@ -50,10 +51,13 @@ WINDOWS_REPARSE_POINT = 0x400
 
 
 def is_link_or_reparse(path: Path) -> bool:
-    if path.is_symlink():
-        return True
     try:
-        return bool(getattr(path.lstat(), "st_file_attributes", 0) & WINDOWS_REPARSE_POINT)
+        metadata = path.lstat()
+        return stat.S_ISLNK(metadata.st_mode) or bool(
+            getattr(metadata, "st_file_attributes", 0) & WINDOWS_REPARSE_POINT
+        )
+    except FileNotFoundError:
+        return False
     except OSError:
         return True
 

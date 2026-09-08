@@ -1,0 +1,12 @@
+{
+  "schema_version": "0.2",
+  "candidates": [
+    {
+      "candidate_id": "merge-review-1",
+      "source": "sample-project",
+      "target": "sample-dependency",
+      "type": "candidate-merge",
+      "summary": "AI suggests reviewing whether these synthetic projects should merge; this is not an approved relationship."
+    }
+  ]
+}

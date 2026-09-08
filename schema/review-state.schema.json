@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Context Linker private approved action review state",
+  "oneOf": [
+    {"$ref": "#/$defs/v01"},
+    {"$ref": "#/$defs/v02"}
+  ],
+  "$defs": {
+    "safeText": {"type": "string", "minLength": 1, "maxLength": 500},
+    "identifier": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"},
+    "v01Project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "updated_at"],
+      "properties": {
+        "project_id": {"$ref": "#/$defs/identifier"},
+        "status": {"enum": ["active", "paused", "blocked", "maintaining", "inactive", "unknown"]},
+        "current_goal": {"$ref": "#/$defs/safeText"},
+        "next_action": {"$ref": "#/$defs/safeText"},
+        "blockers": {"type": "array", "maxItems": 8, "items": {"$ref": "#/$defs/safeText"}},
+        "updated_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "v02Project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "updated_at"],
+      "properties": {
+        "project_id": {"$ref": "#/$defs/identifier"},
+        "priority": {"enum": ["P0", "P1", "P2", "P3", "unknown"]},
+        "activity": {"enum": ["active", "paused", "blocked", "maintaining", "inactive", "unknown"]},
+        "attention": {"enum": ["today", "this-week", "later", "none", "unknown"]},
+        "why_now": {"$ref": "#/$defs/safeText"},
+        "current_goal": {"$ref": "#/$defs/safeText"},
+        "next_action": {"$ref": "#/$defs/safeText"},
+        "done_when": {"$ref": "#/$defs/safeText"},
+        "owner": {"$ref": "#/$defs/safeText"},
+        "due_at": {"type": "string", "minLength": 10, "maxLength": 40},
+        "blockers": {"type": "array", "maxItems": 8, "items": {"$ref": "#/$defs/safeText"}},
+        "updated_at": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"}
+        ,"records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "text"],
+            "properties": {
+              "record_id": {"type": "string", "pattern": "^state-[0-9a-f]{16}$"},
+              "kind": {"enum": ["priority", "activity", "attention", "why-now", "current-goal", "completed", "blocker", "next-action", "done-when", "owner", "decision", "deadline"]},
+              "text": {"$ref": "#/$defs/safeText"},
+              "status": {"enum": ["open", "resolved", "superseded", "stale", "needs_review"]},
+              "source_ref": {"$ref": "#/$defs/safeText"},
+              "observed_at": {"type": "string", "format": "date-time"},
+              "expires_at": {"type": "string", "format": "date-time"},
+              "supersedes": {"type": "array", "items": {"type": "string", "pattern": "^state-[0-9a-f]{16}$"}}
+            }
+          }
+        }
+      }
+    },
+    "v01": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "projects"],
+      "properties": {
+        "schema_version": {"const": "0.1"},
+        "projects": {"type": "array", "items": {"$ref": "#/$defs/v01Project"}}
+      }
+    },
+    "v02": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "projects"],
+      "properties": {
+        "schema_version": {"const": "0.2"},
+        "projects": {"type": "array", "items": {"$ref": "#/$defs/v02Project"}}
+      }
+    }
+  }
+}

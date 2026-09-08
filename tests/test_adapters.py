@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ai_context_linker.adapters import classify_changed_path, collect_filename_inventory
+import pytest
+
+from ai_context_linker.adapters import classify_changed_path, collect_filename_inventory, is_link_or_reparse
 
 
 def test_filename_inventory_reports_entry_points_and_tests_without_contents(tmp_path: Path) -> None:
@@ -58,3 +60,27 @@ def test_changed_path_classification_is_coarse() -> None:
     assert classify_changed_path("docs/plan.md") == "docs"
     assert classify_changed_path("pyproject.toml") == "config"
     assert classify_changed_path("assets/logo.png") == "other"
+
+
+def test_link_check_distinguishes_missing_files_from_access_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    missing = tmp_path / "missing"
+    assert is_link_or_reparse(missing) is False
+    original = Path.lstat
+
+    def denied(path: Path):
+        if path == missing:
+            raise PermissionError("synthetic access denied")
+        return original(path)
+
+    monkeypatch.setattr(Path, "lstat", denied)
+    assert is_link_or_reparse(missing) is True
+
+
+def test_broken_symlink_remains_a_link(tmp_path: Path) -> None:
+    linked = tmp_path / "broken-link"
+    try:
+        linked.symlink_to(tmp_path / "absent-target")
+    except OSError:
+        pytest.skip("symbolic links unavailable")
+    assert not linked.exists()
+    assert is_link_or_reparse(linked) is True

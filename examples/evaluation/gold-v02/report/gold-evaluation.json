@@ -1,0 +1,270 @@
+{
+  "schema_version": "0.2",
+  "suite_observed_at": "2026-08-28T12:00:00+08:00",
+  "case_count": 13,
+  "scenario_expectations_pass": true,
+  "scenario_mismatches": [],
+  "metrics": {
+    "approved_next_action_transfer": 1.0,
+    "blocker_precision": 1.0,
+    "blocker_recall": 1.0,
+    "resolved_blocker_false_positive_rate": 0.0,
+    "semantic_diff_precision": 1.0,
+    "semantic_diff_recall": 1.0,
+    "factual_relationship_precision": 1.0,
+    "published_relationship_evidence_coverage": 1.0,
+    "configured_privacy_leaks": 0,
+    "deterministic_output": 1.0
+  },
+  "gates": {
+    "approved_next_action_transfer": {
+      "value": 1.0,
+      "operator": ">=",
+      "threshold": 1.0,
+      "pass": true
+    },
+    "blocker_precision": {
+      "value": 1.0,
+      "operator": ">=",
+      "threshold": 0.9,
+      "pass": true
+    },
+    "blocker_recall": {
+      "value": 1.0,
+      "operator": ">=",
+      "threshold": 0.9,
+      "pass": true
+    },
+    "resolved_blocker_false_positive_rate": {
+      "value": 0.0,
+      "operator": "<=",
+      "threshold": 0.05,
+      "pass": true
+    },
+    "semantic_diff_precision": {
+      "value": 1.0,
+      "operator": ">=",
+      "threshold": 0.95,
+      "pass": true
+    },
+    "semantic_diff_recall": {
+      "value": 1.0,
+      "operator": ">=",
+      "threshold": 0.95,
+      "pass": true
+    },
+    "factual_relationship_precision": {
+      "value": 1.0,
+      "operator": ">=",
+      "threshold": 0.95,
+      "pass": true
+    },
+    "published_relationship_evidence_coverage": {
+      "value": 1.0,
+      "operator": ">=",
+      "threshold": 1.0,
+      "pass": true
+    },
+    "configured_privacy_leaks": {
+      "value": 0,
+      "operator": "=",
+      "threshold": 0,
+      "pass": true
+    },
+    "deterministic_output": {
+      "value": 1.0,
+      "operator": ">=",
+      "threshold": 1.0,
+      "pass": true
+    }
+  },
+  "all_gates_pass": true,
+  "case_results": {
+    "blocker-resolved": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [],
+      "priority_main": [],
+      "dependency_endpoints": [],
+      "semantic_changes": [
+        "state|work|blocker|state-0000000000000001|status|open->resolved"
+      ],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": true
+    },
+    "blocker-superseded": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [
+        "work|state-0000000000000002"
+      ],
+      "priority_main": [
+        "work"
+      ],
+      "dependency_endpoints": [],
+      "semantic_changes": [
+        "state|work|blocker|state-0000000000000001|status|open->superseded",
+        "state|work|blocker|state-0000000000000002|added"
+      ],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": true
+    },
+    "broad-goal": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [],
+      "priority_main": [],
+      "dependency_endpoints": [],
+      "semantic_changes": [],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": false
+    },
+    "deadline": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [],
+      "priority_main": [
+        "deadline-project"
+      ],
+      "dependency_endpoints": [],
+      "semantic_changes": [],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": false
+    },
+    "human-priority": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [
+        "Run the P0 acceptance fixture."
+      ],
+      "open_blockers": [],
+      "priority_main": [
+        "p0-project",
+        "today-project"
+      ],
+      "dependency_endpoints": [],
+      "semantic_changes": [],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": false
+    },
+    "dependency-endpoint": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [
+        "Run the approved end-to-end fixture."
+      ],
+      "open_blockers": [
+        "main-project|state-0000000000000032"
+      ],
+      "priority_main": [
+        "main-project"
+      ],
+      "dependency_endpoints": [
+        "dependency-project"
+      ],
+      "semantic_changes": [],
+      "published_relationships": [
+        "main-project|blocked-by|dependency-project"
+      ],
+      "published_relationships_with_evidence": 1,
+      "baseline_available": false
+    },
+    "sensitive-input": {
+      "privacy_rejected": true,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [],
+      "priority_main": [],
+      "dependency_endpoints": [],
+      "semantic_changes": [],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": false
+    },
+    "same-name": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [],
+      "priority_main": [],
+      "dependency_endpoints": [],
+      "semantic_changes": [],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": false
+    },
+    "separate-design": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [],
+      "priority_main": [],
+      "dependency_endpoints": [],
+      "semantic_changes": [],
+      "published_relationships": [
+        "private-core|separate-by-design|public-tool"
+      ],
+      "published_relationships_with_evidence": 1,
+      "baseline_available": false
+    },
+    "ai-merge-candidate": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [],
+      "priority_main": [],
+      "dependency_endpoints": [],
+      "semantic_changes": [],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": false
+    },
+    "no-previous": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [],
+      "priority_main": [],
+      "dependency_endpoints": [],
+      "semantic_changes": [],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": false
+    },
+    "disappeared-source": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [],
+      "priority_main": [],
+      "dependency_endpoints": [],
+      "semantic_changes": [
+        "state|work|blocker|state-0000000000000040|status|open->needs_review"
+      ],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": true
+    },
+    "stale-approved": {
+      "privacy_rejected": false,
+      "privacy_leaks": 0,
+      "approved_next_actions": [],
+      "open_blockers": [],
+      "priority_main": [],
+      "dependency_endpoints": [],
+      "semantic_changes": [],
+      "published_relationships": [],
+      "published_relationships_with_evidence": 0,
+      "baseline_available": false
+    }
+  }
+}

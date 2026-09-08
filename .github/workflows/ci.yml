@@ -8,29 +8,41 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  verify:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.11"
+            profile: candidate
+          - os: ubuntu-latest
+            python-version: "3.12"
+            profile: check
+          - os: ubuntu-latest
+            python-version: "3.13"
+            profile: check
+          - os: windows-latest
+            python-version: "3.11"
+            profile: check
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: python -m pip install -e ".[dev]"
-      - run: python -m pytest -q
-      - run: >-
-          python -m ai_context_linker scan
-          --config examples/synthetic-workspace-config.json
-          --review-dir output/review
-      - run: >-
-          python -m ai_context_linker build
-          --manifest output/review/candidate-manifest.json
-          --output-dir output
-      - run: >-
-          python -m ai_context_linker slice
-          --manifest output/review/candidate-manifest.json
-          --question "What should I prioritize next?"
-          --output-dir output
+      - name: Explicitly provision development dependencies
+        run: python -m pip install -e ".[dev]"
+      - name: Frozen-source tests, gold suites, and synthetic smoke
+        if: matrix.profile == 'check'
+        run: >-
+          python -I -B scripts/verify.py --profile check
+          --output-dir "${{ runner.temp }}/linker-check"
+      - name: Frozen-source checks and offline installed-wheel verification
+        if: matrix.profile == 'candidate'
+        shell: bash
+        run: |
+          fingerprint="$(python -I -B scripts/verify.py --print-fingerprint)"
+          python -I -B scripts/verify.py --profile candidate \
+            --reviewed-source "$fingerprint" \
+            --output-dir "$RUNNER_TEMP/linker-candidate"

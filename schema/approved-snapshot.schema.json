@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Context Linker private approved snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "approved_at", "facts_sha256", "approval_sha256", "manifest"],
+  "properties": {
+    "schema_version": {"const": "0.2"},
+    "approved_at": {"type": "string", "format": "date-time"},
+    "facts_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "approval_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "manifest": {"type": "object"}
+  }
+}

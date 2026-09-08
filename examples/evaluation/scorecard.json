@@ -1,0 +1,95 @@
+{
+  "schema_version": "0.1",
+  "evaluation_id": "synthetic-parity-example",
+  "model": "gpt-5.6-sol",
+  "project_set": "synthetic-approved-projects",
+  "conditions": {
+    "full_workspace": {
+      "local_access": true,
+      "full_context_budget": true,
+      "bundle_only": false
+    },
+    "linker": {
+      "local_access": false,
+      "full_context_budget": true,
+      "bundle_only": true
+    }
+  },
+  "questions": [
+    {
+      "id": "advance-today",
+      "text": "What should I advance today, and why?",
+      "answers": {"full_workspace": "full-workspace.md", "linker": "linker.md"},
+      "ratings": {
+        "factual_grounding": {"full_workspace": {"score": 4, "note": "Synthetic facts are cited."}, "linker": {"score": 4, "note": "The same facts are preserved."}},
+        "current_state_freshness": {"full_workspace": {"score": 4, "note": "Synthetic state is current."}, "linker": {"score": 4, "note": "Current state is retained."}},
+        "blocker_recall": {"full_workspace": {"score": 4, "note": "The blocker is present."}, "linker": {"score": 4, "note": "The blocker is present."}},
+        "next_action_recall": {"full_workspace": {"score": 4, "note": "The next action is present."}, "linker": {"score": 4, "note": "The next action is present."}},
+        "relationship_usefulness": {"full_workspace": {"score": 4, "note": "The dependency is useful."}, "linker": {"score": 4, "note": "The dependency is useful."}},
+        "uncertainty_discipline": {"full_workspace": {"score": 4, "note": "Unknowns stay unknown."}, "linker": {"score": 4, "note": "Unknowns stay unknown."}}
+      },
+      "material_loss": false,
+      "notes": "Synthetic parity example."
+    },
+    {
+      "id": "active-blockers",
+      "text": "Where is each active project blocked?",
+      "answers": {"full_workspace": "full-workspace.md", "linker": "linker.md"},
+      "ratings": {
+        "factual_grounding": {"full_workspace": {"score": 4, "note": "Synthetic facts are cited."}, "linker": {"score": 4, "note": "The same facts are preserved."}},
+        "current_state_freshness": {"full_workspace": {"score": 4, "note": "Synthetic state is current."}, "linker": {"score": 4, "note": "Current state is retained."}},
+        "blocker_recall": {"full_workspace": {"score": 4, "note": "The blocker is present."}, "linker": {"score": 4, "note": "The blocker is present."}},
+        "next_action_recall": {"full_workspace": {"score": 4, "note": "The next action is present."}, "linker": {"score": 4, "note": "The next action is present."}},
+        "relationship_usefulness": {"full_workspace": {"score": 4, "note": "The dependency is useful."}, "linker": {"score": 4, "note": "The dependency is useful."}},
+        "uncertainty_discipline": {"full_workspace": {"score": 4, "note": "Unknowns stay unknown."}, "linker": {"score": 4, "note": "Unknowns stay unknown."}}
+      },
+      "material_loss": false,
+      "notes": "Synthetic parity example."
+    },
+    {
+      "id": "next-actions",
+      "text": "What is the next concrete action?",
+      "answers": {"full_workspace": "full-workspace.md", "linker": "linker.md"},
+      "ratings": {
+        "factual_grounding": {"full_workspace": {"score": 4, "note": "Synthetic facts are cited."}, "linker": {"score": 4, "note": "The same facts are preserved."}},
+        "current_state_freshness": {"full_workspace": {"score": 4, "note": "Synthetic state is current."}, "linker": {"score": 4, "note": "Current state is retained."}},
+        "blocker_recall": {"full_workspace": {"score": 4, "note": "The blocker is present."}, "linker": {"score": 4, "note": "The blocker is present."}},
+        "next_action_recall": {"full_workspace": {"score": 4, "note": "The next action is present."}, "linker": {"score": 4, "note": "The next action is present."}},
+        "relationship_usefulness": {"full_workspace": {"score": 4, "note": "The dependency is useful."}, "linker": {"score": 4, "note": "The dependency is useful."}},
+        "uncertainty_discipline": {"full_workspace": {"score": 4, "note": "Unknowns stay unknown."}, "linker": {"score": 4, "note": "Unknowns stay unknown."}}
+      },
+      "material_loss": false,
+      "notes": "Synthetic parity example."
+    },
+    {
+      "id": "relationships",
+      "text": "Which projects depend on, overlap with, or may consolidate into another?",
+      "answers": {"full_workspace": "full-workspace.md", "linker": "linker.md"},
+      "ratings": {
+        "factual_grounding": {"full_workspace": {"score": 4, "note": "Synthetic facts are cited."}, "linker": {"score": 4, "note": "The same facts are preserved."}},
+        "current_state_freshness": {"full_workspace": {"score": 4, "note": "Synthetic state is current."}, "linker": {"score": 4, "note": "Current state is retained."}},
+        "blocker_recall": {"full_workspace": {"score": 4, "note": "The blocker is present."}, "linker": {"score": 4, "note": "The blocker is present."}},
+        "next_action_recall": {"full_workspace": {"score": 4, "note": "The next action is present."}, "linker": {"score": 4, "note": "The next action is present."}},
+        "relationship_usefulness": {"full_workspace": {"score": 4, "note": "The dependency is useful."}, "linker": {"score": 4, "note": "The dependency is useful."}},
+        "uncertainty_discipline": {"full_workspace": {"score": 4, "note": "Unknowns stay unknown."}, "linker": {"score": 4, "note": "Unknowns stay unknown."}}
+      },
+      "material_loss": false,
+      "notes": "Synthetic parity example."
+    },
+    {
+      "id": "snapshot-changes",
+      "text": "What changed since the previous approved snapshot?",
+      "answers": {"full_workspace": "full-workspace.md", "linker": "linker.md"},
+      "ratings": {
+        "factual_grounding": {"full_workspace": {"score": 4, "note": "Synthetic facts are cited."}, "linker": {"score": 4, "note": "The same facts are preserved."}},
+        "current_state_freshness": {"full_workspace": {"score": 4, "note": "Synthetic state is current."}, "linker": {"score": 4, "note": "Current state is retained."}},
+        "blocker_recall": {"full_workspace": {"score": 4, "note": "The blocker is present."}, "linker": {"score": 4, "note": "The blocker is present."}},
+        "next_action_recall": {"full_workspace": {"score": 4, "note": "The next action is present."}, "linker": {"score": 4, "note": "The next action is present."}},
+        "relationship_usefulness": {"full_workspace": {"score": 4, "note": "The dependency is useful."}, "linker": {"score": 4, "note": "The dependency is useful."}},
+        "uncertainty_discipline": {"full_workspace": {"score": 4, "note": "Unknowns stay unknown."}, "linker": {"score": 4, "note": "Unknowns stay unknown."}}
+      },
+      "material_loss": false,
+      "notes": "Synthetic parity example."
+    }
+  ]
+}
