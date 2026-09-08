@@ -25,11 +25,15 @@
 - **Plus：** 在普通 Chat 中选用账号可用的高思考强度，深入分析项目，不消耗 Codex 额度。
 - **Pro：** 在普通 Chat 中选用账号已开放的 Pro 模式，处理更复杂的项目问题，同样无需调用 Codex。
 
-模型与思考选项以你的 ChatGPT 账号为准；Linker 不提供额外模型权限。以上“不消耗额度”专指 Codex，ChatGPT 自身的套餐限制仍适用。
+模型与思考选项以账号为准，ChatGPT 套餐限制仍适用。另用 Codex 整理资料或开发的工作仍计入 Codex 用量；[ChatGPT Work 与 Codex 共享用量](https://learn.chatgpt.com/docs/pricing)。
 
-Linker 命令行在本机收集、整理资料，不调用 Codex 或模型 API，因此这些步骤本身不消耗 Codex 额度或模型 API Token。把核对后的 Markdown 交给普通 **ChatGPT Chat** 讨论，仍遵守你的 ChatGPT 套餐用量限制。如果另用 Codex 编写资料或维护项目，那部分仍计入 Codex 用量。ChatGPT Work 是另一种工作方式，[与 Codex 共享用量](https://learn.chatgpt.com/docs/pricing)。
+**本地纯 Python 脚本，零第三方 Python 运行时依赖。**
 
-由你决定纳入哪些项目、允许分享哪些事实；未经批准的项目不进入资料包。Chat 根据提供的证据讨论，缺失或过期的项目状态仍应标为未知。只通过文件上传、ChatGPT 项目或账号支持的专用 Drive 目录分享审核后的输出。
+- **资料留在本机整理：** 核心采集与生成不联网、不调用 AI 或模型 API、不自动上传。读取 Git 信息时使用本机 Git。
+- **读取范围由你控制：** 新项目默认不导出，只采集明确允许的资料；不执行被扫描项目的代码，不修改业务源码，无需上传整个仓库。
+- **先检查，再分享：** 内置敏感信息检测与脱敏，输出可预览、可追溯。你决定把哪些资料交给 Chat；业务隐私仍需自己核对。
+
+Chat 根据你分享的证据讨论，缺失或过期的状态仍标为未知。只通过文件上传、ChatGPT 项目或账号支持的专用 Drive 目录分享审核后的输出。详见[安全边界](docs/security-boundary.md)。
 
 **刚开始使用？** 先看[中文上手指南](docs/quickstart-zh-CN.md)：从一个项目开始，用中文核对目标、卡点和下一步。助手可以协助整理，不需要你从头手写 JSON。
 

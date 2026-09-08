@@ -25,11 +25,15 @@
 - **Plus:** Choose a higher reasoning effort available in ordinary Chat to analyze your projects without using Codex quota.
 - **Pro:** Choose a Pro mode available in ordinary Chat for more complex project questions, without invoking Codex.
 
-Models and reasoning options depend on your ChatGPT account; Linker grants no additional model access. “No quota used” refers specifically to Codex. Your ChatGPT plan limits still apply.
+Models and reasoning options depend on your account, and ChatGPT plan limits still apply. Separate Codex work to prepare evidence or develop projects still uses Codex quota; [ChatGPT Work shares usage with Codex](https://learn.chatgpt.com/docs/pricing).
 
-The Linker CLI runs locally without calling Codex or a model API, so collection and rendering themselves use no Codex quota or model API tokens. Share the reviewed Markdown with ordinary **ChatGPT Chat** for discussion under your ChatGPT plan's limits. If you separately use Codex to prepare evidence or maintain projects, that work still consumes Codex usage. ChatGPT Work is a different workflow and [shares usage with Codex](https://learn.chatgpt.com/docs/pricing).
+**Local, pure Python scripts. Zero third-party Python runtime dependencies.**
 
-You choose which projects and facts may be included; unapproved projects remain excluded. Chat reasons from the supplied evidence, and missing or stale project state remains unknown. Deliver only the reviewed output through a file upload, a ChatGPT Project, or a dedicated Drive folder supported by your account.
+- **Prepare data locally:** Core collection and rendering make no network or AI/model API calls and never upload automatically. Git metadata is read through your local Git installation.
+- **Control what is read:** New projects are excluded from export by default. Only explicitly allowed material is collected; scanned project code is never executed and business source files are not modified. No whole-repository upload is needed.
+- **Review before sharing:** Built-in sensitive-data checks and redaction produce output you can preview and trace to its sources. You choose what to share with Chat; business-sensitive information still needs your review.
+
+Chat reasons from the evidence you share; missing or stale state remains unknown. Deliver only reviewed output through a file upload, a ChatGPT Project, or a dedicated Drive folder supported by your account. See the [security boundary](docs/security-boundary.md).
 
 ## What it helps you do
 
