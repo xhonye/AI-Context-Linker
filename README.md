@@ -6,9 +6,13 @@
 
 <h1 align="center">AI Context Linker</h1>
 
-<p align="center"><strong>Your projects stay local. Your conversations gain context.</strong></p>
+<p align="center"><strong>Help ChatGPT Chat understand all your local projects.</strong></p>
 
-<p align="center">Use ChatGPT as a project thinking partner — without uploading your repositories.</p>
+<p align="center">Turn the project details you choose to share into a reviewable briefing.<br>Discuss what each project does, where it is blocked, and what to do next in ordinary Chat.</p>
+
+<p align="center"><strong>Ordinary Chat analysis · No Codex invocation required · No whole-repository upload</strong></p>
+
+<p align="center"><a href="#quick-start">Quick start</a> · <a href="#what-changed-in-real-question-tests">See the results</a></p>
 
 <p align="center">
   <a href="https://github.com/xhonye/AI-Context-Linker/actions/workflows/ci.yml"><img src="https://github.com/xhonye/AI-Context-Linker/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -16,11 +20,11 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT"></a>
 </p>
 
-ChatGPT is excellent at strategy, prioritization, and brainstorming. The problem is context: it cannot see what is happening across your local projects, while uploading whole repositories is noisy and can expose code, credentials, private paths, or runtime data.
+Use the capable model or Pro mode available in your ChatGPT account to reason over the briefing. Linker does not grant model access or require a particular model version.
 
-AI Context Linker builds a small, reviewable context bundle on your computer. You decide what is allowed, inspect the candidate, and share only the generated entry and project shards through a file upload, a ChatGPT Project, or a dedicated Drive folder supported by your account.
+The Linker CLI runs locally without calling Codex or a model API, so collection and rendering themselves use no Codex quota or model API tokens. Share the reviewed Markdown with ordinary **ChatGPT Chat** for discussion under your ChatGPT plan's limits. If you separately use Codex to prepare evidence or maintain projects, that work still consumes Codex usage. ChatGPT Work is a different workflow and [shares usage with Codex](https://learn.chatgpt.com/docs/pricing).
 
-The result is a better ChatGPT conversation with much less repeated explanation.
+You choose which projects and facts may be included; unapproved projects remain excluded. Chat reasons from the supplied evidence, and missing or stale project state remains unknown. Deliver only the reviewed output through a file upload, a ChatGPT Project, or a dedicated Drive folder supported by your account.
 
 ## What it helps you do
 

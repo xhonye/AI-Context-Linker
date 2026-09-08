@@ -6,9 +6,13 @@
 
 <h1 align="center">AI Context Linker</h1>
 
-<p align="center"><strong>项目留在本地，聊天也有上下文。</strong></p>
+<p align="center"><strong>让 ChatGPT Chat 看懂你的所有本地项目</strong></p>
 
-<p align="center">不上传整个代码库，也能让 ChatGPT 帮你思考项目方向和下一步。</p>
+<p align="center">把你选定的项目资料整理成一份可审阅的简报。<br>交给普通 Chat，讨论每个项目在做什么、卡在哪里、下一步怎么走。</p>
+
+<p align="center"><strong>普通 Chat 分析 · 无需调用 Codex · 无需上传整个代码仓库</strong></p>
+
+<p align="center"><a href="#快速开始">快速开始</a> · <a href="#真实问答中看到了什么变化">查看效果</a></p>
 
 <p align="center">
   <a href="https://github.com/xhonye/AI-Context-Linker/actions/workflows/ci.yml"><img src="https://github.com/xhonye/AI-Context-Linker/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -16,9 +20,11 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT"></a>
 </p>
 
-ChatGPT 可以帮助讨论方向、安排优先级和寻找新思路，但它看不到你本地项目的现状。直接上传整个仓库，资料往往太多，还可能带出代码、凭证、私人路径和运行数据。
+用你 ChatGPT 账号中可用的高阶模型或 Pro 模式分析资料。Linker 不提供模型权限，也不绑定某一个模型版本。
 
-AI Context Linker 在本机生成一份小而可核对的资料包。由你决定允许收集什么、检查候选内容，再通过文件上传、ChatGPT 项目或账号支持的专用 Drive 目录分享。
+Linker 命令行在本机收集、整理资料，不调用 Codex 或模型 API，因此这些步骤本身不消耗 Codex 额度或模型 API Token。把核对后的 Markdown 交给普通 **ChatGPT Chat** 讨论，仍遵守你的 ChatGPT 套餐用量限制。如果另用 Codex 编写资料或维护项目，那部分仍计入 Codex 用量。ChatGPT Work 是另一种工作方式，[与 Codex 共享用量](https://learn.chatgpt.com/docs/pricing)。
+
+由你决定纳入哪些项目、允许分享哪些事实；未经批准的项目不进入资料包。Chat 根据提供的证据讨论，缺失或过期的项目状态仍应标为未知。只通过文件上传、ChatGPT 项目或账号支持的专用 Drive 目录分享审核后的输出。
 
 **刚开始使用？** 先看[中文上手指南](docs/quickstart-zh-CN.md)：从一个项目开始，用中文核对目标、卡点和下一步。助手可以协助整理，不需要你从头手写 JSON。
 
