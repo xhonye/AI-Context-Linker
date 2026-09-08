@@ -1,9 +1,4 @@
-<details>
-<summary>🌐 Language / 语言 · English</summary>
-
-**English** · [简体中文](README.zh-CN.md)
-
-</details>
+🌐 **English** · [简体中文](README.zh-CN.md)
 
 <p align="center">
   <img src="docs/assets/logo.svg" width="96" height="96" alt="AI Context Linker logo: two connected links">
