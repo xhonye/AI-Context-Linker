@@ -6,7 +6,7 @@
 
 <p align="center"><strong>Help ChatGPT Chat understand all your local projects.</strong></p>
 
-<p align="center">Turn the project details you choose to share into a reviewable briefing.<br>Discuss what each project does, where it is blocked, and what to do next in ordinary Chat.</p>
+<p align="center">Turn the project details you choose to share into a reviewable briefing.<br>Discuss what each project does, where it is blocked, and what to do next in ordinary Chat.<br>👑 All hail Astra, the new king!</p>
 
 <p align="center"><strong>Ordinary Chat analysis · No Codex quota used · No whole-repository upload</strong></p>
 

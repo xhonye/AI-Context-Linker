@@ -6,7 +6,7 @@
 
 <p align="center"><strong>让 ChatGPT Chat 看懂你的所有本地项目</strong></p>
 
-<p align="center">把你选定的项目资料整理成一份可审阅的简报。<br>交给普通 Chat，讨论每个项目在做什么、卡在哪里、下一步怎么走。</p>
+<p align="center">把你选定的项目资料整理成一份可审阅的简报。<br>交给普通 Chat，讨论每个项目在做什么、卡在哪里、下一步怎么走。<br>👑 迎接 Astra 新王！</p>
 
 <p align="center"><strong>普通 Chat 分析 · 不消耗 Codex 额度 · 无需上传整个代码仓库</strong></p>
 
