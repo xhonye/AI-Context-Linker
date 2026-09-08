@@ -1,10 +1,8 @@
 🌐 [English](README.md) · **简体中文**
 
 <p align="center">
-  <img src="docs/assets/logo.svg" width="96" height="96" alt="AI Context Linker 标识：两段相连的链条">
+  <img src="docs/assets/brand-header.svg" width="860" alt="AI Context Linker：紫色星光字标与链条标识">
 </p>
-
-<h1 align="center">AI Context Linker</h1>
 
 <p align="center"><strong>让 ChatGPT Chat 看懂你的所有本地项目</strong></p>
 

@@ -1,10 +1,8 @@
 🌐 **English** · [简体中文](README.zh-CN.md)
 
 <p align="center">
-  <img src="docs/assets/logo.svg" width="96" height="96" alt="AI Context Linker logo: two connected links">
+  <img src="docs/assets/brand-header.svg" width="860" alt="AI Context Linker — purple starlight wordmark and connected-link logo">
 </p>
-
-<h1 align="center">AI Context Linker</h1>
 
 <p align="center"><strong>Help ChatGPT Chat understand all your local projects.</strong></p>
 
