@@ -10,7 +10,7 @@
 
 <p align="center">Turn the project details you choose to share into a reviewable briefing.<br>Discuss what each project does, where it is blocked, and what to do next in ordinary Chat.</p>
 
-<p align="center"><strong>Ordinary Chat analysis · No Codex invocation required · No whole-repository upload</strong></p>
+<p align="center"><strong>Ordinary Chat analysis · No Codex quota used · No whole-repository upload</strong></p>
 
 <p align="center"><a href="#quick-start">Quick start</a> · <a href="#what-changed-in-real-question-tests">See the results</a></p>
 
@@ -20,7 +20,12 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT"></a>
 </p>
 
-Use the capable model or Pro mode available in your ChatGPT account to reason over the briefing. Linker does not grant model access or require a particular model version.
+**Already subscribe to ChatGPT? Use it to discuss your local projects.**
+
+- **Plus:** Choose a higher reasoning effort available in ordinary Chat to analyze your projects without using Codex quota.
+- **Pro:** Choose a Pro mode available in ordinary Chat for more complex project questions, without invoking Codex.
+
+Models and reasoning options depend on your ChatGPT account; Linker grants no additional model access. “No quota used” refers specifically to Codex. Your ChatGPT plan limits still apply.
 
 The Linker CLI runs locally without calling Codex or a model API, so collection and rendering themselves use no Codex quota or model API tokens. Share the reviewed Markdown with ordinary **ChatGPT Chat** for discussion under your ChatGPT plan's limits. If you separately use Codex to prepare evidence or maintain projects, that work still consumes Codex usage. ChatGPT Work is a different workflow and [shares usage with Codex](https://learn.chatgpt.com/docs/pricing).
 

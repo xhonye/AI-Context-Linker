@@ -10,7 +10,7 @@
 
 <p align="center">把你选定的项目资料整理成一份可审阅的简报。<br>交给普通 Chat，讨论每个项目在做什么、卡在哪里、下一步怎么走。</p>
 
-<p align="center"><strong>普通 Chat 分析 · 无需调用 Codex · 无需上传整个代码仓库</strong></p>
+<p align="center"><strong>普通 Chat 分析 · 不消耗 Codex 额度 · 无需上传整个代码仓库</strong></p>
 
 <p align="center"><a href="#快速开始">快速开始</a> · <a href="#真实问答中看到了什么变化">查看效果</a></p>
 
@@ -20,7 +20,12 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT"></a>
 </p>
 
-用你 ChatGPT 账号中可用的高阶模型或 Pro 模式分析资料。Linker 不提供模型权限，也不绑定某一个模型版本。
+**已有 ChatGPT 订阅？直接用它讨论本地项目。**
+
+- **Plus：** 在普通 Chat 中选用账号可用的高思考强度，深入分析项目，不消耗 Codex 额度。
+- **Pro：** 在普通 Chat 中选用账号已开放的 Pro 模式，处理更复杂的项目问题，同样无需调用 Codex。
+
+模型与思考选项以你的 ChatGPT 账号为准；Linker 不提供额外模型权限。以上“不消耗额度”专指 Codex，ChatGPT 自身的套餐限制仍适用。
 
 Linker 命令行在本机收集、整理资料，不调用 Codex 或模型 API，因此这些步骤本身不消耗 Codex 额度或模型 API Token。把核对后的 Markdown 交给普通 **ChatGPT Chat** 讨论，仍遵守你的 ChatGPT 套餐用量限制。如果另用 Codex 编写资料或维护项目，那部分仍计入 Codex 用量。ChatGPT Work 是另一种工作方式，[与 Codex 共享用量](https://learn.chatgpt.com/docs/pricing)。
 
