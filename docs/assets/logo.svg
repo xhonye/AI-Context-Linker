@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">AI Context Linker</title>
+  <desc id="desc">Two open links joined by a bright bridge, representing reviewed context connecting local projects and conversations.</desc>
+  <rect width="96" height="96" rx="24" fill="#14263D"/>
+  <g fill="none" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" transform="rotate(-30 48 48)">
+    <path d="M43 32h-7a16 16 0 0 0 0 32h7" stroke="#61E1C1"/>
+    <path d="M53 32h7a16 16 0 0 1 0 32h-7" stroke="#8CB5FF"/>
+    <path d="M37 48h22" stroke="#F5FAFF"/>
+  </g>
+</svg>

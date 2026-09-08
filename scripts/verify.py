@@ -24,7 +24,7 @@ from urllib.parse import unquote
 
 INPUT_DIRS = {"src", "tests", "scripts", "schema", "examples", "docs", ".github"}
 INPUT_FILES = {
-    "pyproject.toml", "README.md", "AGENTS.md", "PROJECT_CHARTER.md", "CHANGELOG.md",
+    "pyproject.toml", "README.md", "README.zh-CN.md", "AGENTS.md", "PROJECT_CHARTER.md", "CHANGELOG.md",
     "SECURITY.md", "CONTRIBUTING.md", "LICENSE", ".gitignore", ".gitattributes", "MANIFEST.in",
 }
 SYNC_MARKERS = ("google drive", "googledrive", "onedrive", "dropbox", "icloud", "drivefs")

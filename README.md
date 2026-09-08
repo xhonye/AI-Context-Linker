@@ -1,15 +1,25 @@
-# AI Context Linker
+<details>
+<summary>🌐 Language / 语言 · English</summary>
 
-**Use ChatGPT as a project thinking partner — without uploading your repositories.**
+**English** · [简体中文](README.zh-CN.md)
 
-> 让普通 ChatGPT 持续理解你的本地项目，只同步经过审阅的项目认知，不上传整个代码库。
+</details>
 
-**中文用户从这里开始：[项目留本地，聊天有上下文](docs/quickstart-zh-CN.md)。**
-先选一个项目，用中文核对目标、卡点和下一步；无需自己编辑 JSON，也无需将项目上传 GitHub。
+<p align="center">
+  <img src="docs/assets/logo.svg" width="96" height="96" alt="AI Context Linker logo: two connected links">
+</p>
 
-[![CI](https://github.com/xhonye/AI-Context-Linker/actions/workflows/ci.yml/badge.svg)](https://github.com/xhonye/AI-Context-Linker/actions/workflows/ci.yml)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+<h1 align="center">AI Context Linker</h1>
+
+<p align="center"><strong>Your projects stay local. Your conversations gain context.</strong></p>
+
+<p align="center">Use ChatGPT as a project thinking partner — without uploading your repositories.</p>
+
+<p align="center">
+  <a href="https://github.com/xhonye/AI-Context-Linker/actions/workflows/ci.yml"><img src="https://github.com/xhonye/AI-Context-Linker/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11%2B-blue.svg" alt="Python 3.11+"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT"></a>
+</p>
 
 ChatGPT is excellent at strategy, prioritization, and brainstorming. The problem is context: it cannot see what is happening across your local projects, while uploading whole repositories is noisy and can expose code, credentials, private paths, or runtime data.
 
