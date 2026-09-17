@@ -59,7 +59,7 @@ V0.2 正式关系分为三层：
 
 ### 4. 生命周期与快照层
 
-`scan` 先完成全部状态解析与 lifecycle resolution，再允许行动裁剪。它可读取上一份显式批准 snapshot，生成 `changes.json` 和 `changes.md`，覆盖项目、目标、next action、blocker、deadline 与关系变化；Git 数量只出现在附录。
+`scan` 先完成全部状态解析与 lifecycle resolution，再允许行动裁剪。它可读取上一份显式批准 snapshot，生成 `changes.json` 和 `changes.md`，覆盖项目变化、全部 state record kinds 与关系变化；semantic diff 的种类集合从 canonical state kind 定义派生，不另行维护。每条状态变化都携带 `status` 与 `source_kind`，使已批准行动状态（`approved-review`）与待审仓库状态（`project-state`、`needs_review`）在 `changes.md` 中可直接区分。Git 数量只出现在附录。
 
 `scan` 不自动批准。`approve-snapshot` 在非同步私有目录写入不可变历史和 `latest` 指针，并以独立 approval hash 绑定事实快照。
 

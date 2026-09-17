@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .core import validate_publish_text
+from .core import STATE_KINDS, validate_publish_text
 
 
-SEMANTIC_KINDS = {"priority", "attention", "current-goal", "next-action", "blocker", "deadline"}
+# Derived from the state model rather than restated, so the diff cannot silently
+# drift away from the record kinds the manifest and review state can actually emit.
+SEMANTIC_KINDS = frozenset(STATE_KINDS)
 
 
 def _records(project: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -16,6 +18,26 @@ def _records(project: dict[str, Any]) -> dict[str, dict[str, Any]]:
         str(record["record_id"]): record
         for record in project.get("state_items", [])
         if record.get("record_id") and record.get("kind") in SEMANTIC_KINDS
+    }
+
+
+def _state_change(
+    record: dict[str, Any], *, project_id: str, record_id: str, change: str, **detail: Any
+) -> dict[str, Any]:
+    """Build one semantic state change entry.
+
+    Every entry carries `status` and `source_kind` so a reviewer can tell an
+    approved action record from pending repository-native state without having
+    to cross-reference the manifest.
+    """
+    return {
+        "project_id": project_id,
+        "record_id": record_id,
+        "kind": record["kind"],
+        "change": change,
+        **detail,
+        "status": record.get("status"),
+        "source_kind": record.get("source_kind"),
     }
 
 
@@ -84,22 +106,28 @@ def semantic_changes(
             previous_record = previous_records.get(record_id)
             if current_record is None:
                 state_changes.append(
-                    {"project_id": project_id, "record_id": record_id, "kind": previous_record["kind"], "change": "missing-needs-review"}
+                    _state_change(
+                        previous_record,
+                        project_id=project_id,
+                        record_id=record_id,
+                        change="missing-needs-review",
+                    )
                 )
             elif previous_record is None:
                 state_changes.append(
-                    {"project_id": project_id, "record_id": record_id, "kind": current_record["kind"], "change": "added"}
+                    _state_change(
+                        current_record, project_id=project_id, record_id=record_id, change="added"
+                    )
                 )
             elif current_record["status"] != previous_record["status"]:
                 state_changes.append(
-                    {
-                        "project_id": project_id,
-                        "record_id": record_id,
-                        "kind": current_record["kind"],
-                        "change": "status",
-                        "from": previous_record["status"],
-                        "to": current_record["status"],
-                    }
+                    _state_change(
+                        current_record,
+                        project_id=project_id,
+                        record_id=record_id,
+                        change="status",
+                        **{"from": previous_record["status"], "to": current_record["status"]},
+                    )
                 )
 
             if current_record is not None and previous_record is not None:
@@ -109,8 +137,13 @@ def semantic_changes(
                 ]
                 if fields:
                     state_changes.append(
-                        {"project_id": project_id, "record_id": record_id, "kind": current_record["kind"],
-                         "change": "updated", "fields": fields}
+                        _state_change(
+                            current_record,
+                            project_id=project_id,
+                            record_id=record_id,
+                            change="updated",
+                            fields=fields,
+                        )
                     )
 
     current_relationships = {
@@ -161,7 +194,11 @@ def render_changes_markdown(changes: dict[str, Any]) -> str:
                 f"- Removed: {', '.join(projects['removed']) if projects['removed'] else 'none'}",
                 f"- Changed: {', '.join(projects['changed']) if projects['changed'] else 'none'}",
                 "",
-                "## Goals, next actions, blockers, and deadlines",
+                "## State changes",
+                "",
+                "> Each entry ends with the record's `status` and `source_kind`; only `open` "
+                "records from `approved-review` are approved action state, while e.g. "
+                "`needs_review` `project-state` records are pending repository evidence.",
                 "",
             ]
         )
@@ -172,8 +209,13 @@ def render_changes_markdown(changes: dict[str, Any]) -> str:
                     detail = f"status {item['from']} -> {item['to']}"
                 elif detail == "updated":
                     detail = "updated " + ", ".join(item["fields"])
+                provenance = " · ".join(
+                    f"`{item[key]}`" for key in ("status", "source_kind") if item.get(key)
+                )
+                suffix = f" · {provenance}" if provenance else ""
                 lines.append(
-                    f"- `{item['project_id']}` · `{item['kind']}` · `{item['record_id']}`: {detail}"
+                    f"- `{item['project_id']}` · `{item['kind']}` · `{item['record_id']}`: "
+                    f"{detail}{suffix}"
                 )
         else:
             lines.append("- No semantic state changes.")
