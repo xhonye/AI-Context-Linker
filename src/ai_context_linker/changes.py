@@ -196,8 +196,8 @@ def render_changes_markdown(changes: dict[str, Any]) -> str:
                 "",
                 "## State changes",
                 "",
-                "> Each entry ends with the record's `status` and `source_kind`; only `open` "
-                "records from `approved-review` are approved action state, while e.g. "
+                "> Each entry ends with the record's `status` and `source_kind`: an `open` "
+                "record from `approved-review` is approved action state, while "
                 "`needs_review` `project-state` records are pending repository evidence.",
                 "",
             ]
