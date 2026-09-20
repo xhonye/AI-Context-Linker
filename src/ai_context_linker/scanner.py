@@ -34,6 +34,7 @@ from .core import (
     validate_manifest,
     validate_publish_text,
     validate_skill_summary,
+    validate_document_path,
 )
 from .relationships import (
     DEPENDENCY_METADATA_FILENAMES,
@@ -87,6 +88,7 @@ CONFIG_PROJECT_KEYS = {
     "constraints",
     "code_relationship_scan",
     "architecture_visibility",
+    "python_import_roots",
     "open_questions",
 }
 WORKSPACE_KEYS = {"name", "summary", "current_focus", "decisions", "unknowns"}
@@ -174,8 +176,11 @@ def _safe_relative_path(raw: str, label: str) -> Path:
     return candidate
 
 
-def _metadata_path(raw: str, label: str) -> Path:
+def _metadata_path(raw: str, label: str, *, attached: bool = False) -> Path:
     candidate = _safe_relative_path(raw, label)
+    if attached:
+        validate_document_path(raw)
+        return candidate
     if candidate.name not in ALLOWED_METADATA_NAMES:
         allowed = ", ".join(sorted(ALLOWED_METADATA_NAMES))
         raise ManifestError(f"{label} is not an allowed metadata filename; choose one of: {allowed}")
@@ -601,6 +606,9 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
             raise ManifestError(
                 f"projects[{index}].architecture_visibility requires cloud_visibility=allow"
             )
+        python_import_roots = _strings(project.get("python_import_roots", []), f"projects[{index}].python_import_roots")
+        if python_import_roots and architecture_visibility == "disabled":
+            raise ManifestError("python_import_roots requires architecture_visibility")
         if project.get("attach_files") and cloud_visibility != "allow":
             raise ManifestError(f"projects[{index}].attach_files requires cloud_visibility=allow")
         if cloud_visibility == "deny":
@@ -703,7 +711,8 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
         state_items: list[dict[str, Any]] = []
         state_files_read: list[str] = []
         for item_index, raw_relative in enumerate(allow_files):
-            relative = _metadata_path(raw_relative, f"projects[{index}].allow_files[{item_index}]")
+            relative = _metadata_path(raw_relative, f"projects[{index}].allow_files[{item_index}]",
+                                      attached=raw_relative in attach_files)
             unresolved = root / relative
             if is_link_or_reparse(unresolved):
                 raise ManifestError(f"projects[{index}].allow_files[{item_index}] must not be a symlink")
@@ -719,7 +728,7 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
 
         attached_documents = []
         for name in sorted(attach_files):
-            normalized_name = _metadata_path(name, "attach_files").as_posix()
+            normalized_name = _metadata_path(name, "attach_files", attached=True).as_posix()
             if normalized_name not in documents:
                 raise ManifestError(f"projects[{index}].attach_files references a missing document")
             attached_documents.append(prepare_document(normalized_name, documents[normalized_name]))
@@ -798,6 +807,7 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
                 root,
                 project_id=project_id,
                 mode=architecture_visibility,
+                python_import_roots=python_import_roots,
             )
 
         git_signals, git_evidence, git_report = _git_facts(root, project_id)
@@ -850,6 +860,8 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
                 break
         open_items_added = 0
         for relative_name, document in sorted(documents.items()):
+            if Path(relative_name).name not in DOCUMENT_NAMES:
+                continue  # Custom attachments are untrusted evidence, not extracted instructions or state.
             for item, line_number in _markdown_open_items(document):
                 safe_item = _safe_derived_text(
                     item,
@@ -915,7 +927,7 @@ def collect_candidate(config_path: Path | str, *, observed_at: str | None = None
             }
         )
         relationship_inputs[project_id] = {
-            "documents": documents,
+            "documents": {name: body for name, body in documents.items() if Path(name).name in DOCUMENT_NAMES},
             "identities": dependency_identities,
             "dependencies": dependencies,
             "dependency_sources": dependency_sources,

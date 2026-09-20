@@ -136,7 +136,7 @@
       "additionalProperties": false,
       "required": ["path", "text", "redacted_lines"],
       "properties": {
-        "path": {"type": "string", "maxLength": 4000, "pattern": "^(?!.*(?:\\\\|:|(?:^|/)\\.\\.?(?:/|$)))(?:[^/]+/)*(?:README|AGENTS|CLAUDE|PROJECT_CHARTER|CHANGELOG|CONTRIBUTING|SECURITY|ROADMAP|TODO|STATUS)\\.md$"},
+        "path": {"type": "string", "maxLength": 4000, "pattern": "^(?!.*(?:\\\\|:|(?:^|/)\\.\\.?(?:/|$)))(?:[^/]+/)*(?:[^/]+)\\.md$"},
         "text": {"type": "string", "maxLength": 65536},
         "redacted_lines": {"type": "array", "uniqueItems": true, "items": {"type": "integer", "minimum": 1}}
       }
@@ -150,6 +150,16 @@
         "map_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "truncated": {"type": "boolean"},
         "parse_failures": {"type": "integer", "minimum": 0},
+        "parse_errors": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["id", "reason"],
+            "properties": {
+              "id": {"$ref": "#/$defs/safeString"},
+              "reason": {"enum": ["syntax-error", "encoding-error", "read-error"]}
+            }
+          }
+        },
         "modules": {"type": "array", "items": {"$ref": "#/$defs/architectureModule"}}
       },
       "allOf": [
@@ -182,6 +192,17 @@
         "symbols": {"$ref": "#/$defs/safeStringArray"},
         "internal_imports": {"$ref": "#/$defs/safeStringArray"},
         "external_packages": {"$ref": "#/$defs/safeStringArray"},
+        "unresolved_imports": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["name", "reason", "candidates"],
+            "properties": {
+              "name": {"$ref": "#/$defs/safeString"},
+              "reason": {"enum": ["ambiguous-local-module", "local-import-root-not-declared"]},
+              "candidates": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/safeString"}}
+            }
+          }
+        },
         "internal_calls": {"$ref": "#/$defs/safeStringArray"},
         "evidence": {"$ref": "#/$defs/safeString"}
       }

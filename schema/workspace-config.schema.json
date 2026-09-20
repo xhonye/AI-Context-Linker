@@ -56,6 +56,7 @@
         "approved_summary": {"$ref": "context-manifest.schema.json#/$defs/safeString"},
         "allow_files": {"type": "array", "items": {"$ref": "#/$defs/relativePath"}},
         "attach_files": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"$ref": "#/$defs/relativePath"}},
+        "python_import_roots": {"type": "array", "maxItems": 16, "uniqueItems": true, "items": {"$ref": "#/$defs/relativePath"}},
         "dependency_files": {
           "type": "array",
           "items": {"enum": ["pyproject.toml", "package.json", "Cargo.toml", "go.mod"]}
