@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-context-linker"
-version = "0.2.6"
+version = "0.2.7"
 description = "Give ChatGPT a privacy-safe, reviewable map of local projects."
 readme = "README.md"
 license = "MIT"

@@ -38,7 +38,7 @@
 **自己执行命令？** 需要 [uv](https://docs.astral.sh/uv/getting-started/installation/) 和 Git；uv 可准备 Python 3.11 的隔离环境：
 
 ```sh
-uv tool install --python 3.11 git+https://github.com/xhonye/AI-Context-Linker.git@v0.2.6
+uv tool install --python 3.11 git+https://github.com/xhonye/AI-Context-Linker.git@v0.2.7
 ai-context-linker demo --output-dir ./linker-demo
 ```
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.7 — 2026-09-20
 
 - Accept UTF-8 BOM source files in architecture scans. Report failed file identities and sanitized error categories in review artifacts and briefings (#3).
 - Add explicit project-relative `python_import_roots` for flat Python layouts; report ambiguous and undeclared sibling imports as unresolved rather than external packages (#2).

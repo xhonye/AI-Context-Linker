@@ -30,12 +30,12 @@ not authorize scanning real projects, approving their contents, or uploading fil
 With uv and Git available:
 
 ```sh
-uv tool install --python 3.11 git+https://github.com/xhonye/AI-Context-Linker.git@v0.2.6
+uv tool install --python 3.11 git+https://github.com/xhonye/AI-Context-Linker.git@v0.2.7
 ai-context-linker --help
 ```
 
-The default command installs the stable v0.2.6 release. For a reviewed development
-revision, replace `@v0.2.6` with `@<reviewed-commit-sha>` using an actual verified commit. Do not invent a release or claim a
+The default command installs the stable v0.2.7 release. For a reviewed development
+revision, replace `@v0.2.7` with `@<reviewed-commit-sha>` using an actual verified commit. Do not invent a release or claim a
 PyPI/npm publication. Record the installed source revision when available.
 
 If an existing installation lacks `demo`, explain that it is an older version and

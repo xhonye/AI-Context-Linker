@@ -13,4 +13,4 @@ __all__ = [
     "load_manifest",
     "scan_workspace",
 ]
-__version__ = "0.2.6"
+__version__ = "0.2.7"
