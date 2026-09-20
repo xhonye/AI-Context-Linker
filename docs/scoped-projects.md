@@ -63,50 +63,42 @@ selection, as before.
 
 ## A subproject inside a monorepo
 
-Keep the skill's documents and architecture scoped to the skill directory.
-Declare a **separate, explicitly allowed project** for repository-level dependency
-metadata. The following is a `projects` array inside a normal workspace config;
-paths are relative to that config file:
+No extra project entry or dependency-root setting is needed. For a project with
+`cloud_visibility: allow`, the scanner automatically looks for supported dependency
+manifests in its ancestor directories, stopping at the nearest Git repository
+boundary. This also works when discovery generated an empty `dependency_files`
+list for a child directory. Source and document scans stay inside the child.
 
-```json
-[
-  {
-    "id": "repository",
-    "path": "./monorepo",
-    "summary": "Repository-level dependency declarations; not every child uses every dependency.",
-    "sensitivity": "internal",
-    "cloud_visibility": "allow",
-    "redaction_profile": "standard",
-    "allow_files": [],
-    "dependency_files": ["pyproject.toml"],
-    "architecture_visibility": "disabled"
-  },
-  {
-    "id": "skill",
-    "path": "./monorepo/skills/sample",
-    "sensitivity": "internal",
-    "cloud_visibility": "allow",
-    "redaction_profile": "standard",
-    "allow_files": ["SKILL.md"],
-    "attach_files": ["SKILL.md"],
-    "architecture_visibility": "modules-only",
-    "python_import_roots": ["scripts"]
-  }
-]
+For example, with this layout:
+
+```text
+repository/.git
+repository/pyproject.toml
+repository/skills/sample/SKILL.md
 ```
 
-Only include `python_import_roots` when that directory exists and is an intended
-import root. Repository-level dependency-derived relationships belong to
-`repository`, not to `skill`. The current dependency adapter derives relationships
-to uniquely identified projects in the workspace; it does not export a complete
-third-party dependency inventory. Review the root project's ordinary Git and
-filename-inventory signals too: this is an explicitly allowed project, not a
-dependency-only sandbox. Source parsing and document attachments remain disabled
-for the repository entry above.
+An allowed project rooted at `repository/skills/sample` includes the parsed package
+names from `pyproject.toml` in its candidate and full briefing, labeled
+**repository-shared declarations; child usage unknown**, with repository-relative
+provenance. These declarations do not create child dependency edges or make the
+child inherit the repository package identity. Review and approval still happen
+before publishing. Package versions, URLs, scripts and raw file bodies are not
+exported; declarations are not a complete installed-environment inventory.
 
-`dependency_files` remains limited to supported manifests in each declared
-project root. `../pyproject.toml` is deliberately rejected. Reading an ancestor
-inside the same Git repository is still a larger information boundary and does
-not prove that its dependencies belong to a child. A future dependency-only
-shared-root adapter needs a separate scoped design; this recipe does not claim
-that feature has been implemented.
+Discovery reads at most the nearest ancestor file of each supported name:
+`pyproject.toml`, `package.json`, `Cargo.toml`, and `go.mod`, each capped at 128 KiB.
+It searches at most 32 ancestors and never goes above a nested repository or
+worktree root. A nearer invalid file is reported as unavailable rather than
+silently replaced with a more distant file. Unsupported declaration styles are
+not inferred. Names omitted by safety or size limits are explicitly noted.
+
+Denied and summary-only projects are not scanned. Explicitly denied/summary-only
+ancestor roots, links/reparse points and hidden ancestor paths are not read.
+Directories outside Git do not get ancestor discovery. To opt out, set
+`discover_shared_dependencies: false`; ordinary use needs no new setting.
+
+`dependency_files` still controls local-root metadata used for direct relationship
+derivation. When omitted, supported filenames are detected locally; an explicit
+empty list disables that local adapter. It does not disable shared discovery.
+Explicit `../pyproject.toml` paths remain rejected: automatic discovery is limited
+to the bounded ancestor-manifest surface, not arbitrary parent-file access.

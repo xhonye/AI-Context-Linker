@@ -274,6 +274,7 @@ def _discover_projects(roots: Iterable[Path | str], previous_projects: list[dict
                 "code_relationship_scan",
                 "architecture_visibility",
                 "attach_files",
+                "discover_shared_dependencies",
                 "observe_paths",
             )
             if key in previous

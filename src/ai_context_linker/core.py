@@ -1160,7 +1160,11 @@ def _current_action_projects(manifest: dict[str, Any], *, as_of: str | None = No
 def render_index_markdown(manifest: dict[str, Any], *, as_of: str | None = None) -> str:
     """Render a compact entry, or a self-contained briefing when documents are attached."""
     workspace = manifest["workspace"]
-    self_contained = any(project.get("attached_documents") for project in manifest["projects"])
+    self_contained = any(
+        project.get("attached_documents") or any(
+            signal.startswith("Repository-shared dependency") for signal in project.get("signals", [])
+        ) for project in manifest["projects"]
+    )
     lines = [
         f"# {workspace['name']}项目上下文入口",
         "",

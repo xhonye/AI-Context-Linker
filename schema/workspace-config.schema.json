@@ -57,6 +57,7 @@
         "allow_files": {"type": "array", "items": {"$ref": "#/$defs/relativePath"}},
         "attach_files": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"$ref": "#/$defs/relativePath"}},
         "python_import_roots": {"type": "array", "maxItems": 16, "uniqueItems": true, "items": {"$ref": "#/$defs/relativePath"}},
+        "discover_shared_dependencies": {"type": "boolean", "default": true},
         "dependency_files": {
           "type": "array",
           "items": {"enum": ["pyproject.toml", "package.json", "Cargo.toml", "go.mod"]}
