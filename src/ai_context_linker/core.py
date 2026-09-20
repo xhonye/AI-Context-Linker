@@ -66,7 +66,7 @@ MAX_DOCUMENT_BYTES = 64 * 1024
 MAX_PROJECT_DOCUMENT_BYTES = 256 * 1024
 MAX_ATTACHED_DOCUMENTS = 8
 REDACTED_DOCUMENT_LINE = "[REDACTED: sensitive source line omitted]"
-ARCHITECTURE_INDEX_KEYS = {"mode", "map_sha256", "truncated", "parse_failures", "modules"}
+ARCHITECTURE_INDEX_KEYS = {"mode", "map_sha256", "truncated", "parse_failures", "parse_errors", "modules"}
 ARCHITECTURE_MODULE_KEYS = {
     "id",
     "language",
@@ -75,6 +75,7 @@ ARCHITECTURE_MODULE_KEYS = {
     "internal_imports",
     "external_packages",
     "internal_calls",
+    "unresolved_imports",
     "evidence",
 }
 ARCHITECTURE_MODES = {"modules-only", "modules-symbols"}
@@ -308,6 +309,18 @@ def prepare_document(path: str, text: str) -> dict[str, Any]:
     return {"path": path, "text": "\n".join(lines), "redacted_lines": redacted}
 
 
+def validate_document_path(path: str) -> None:
+    """Accept explicitly selected Markdown evidence, never arbitrary file bodies."""
+    relative = PurePosixPath(path)
+    if (relative.is_absolute() or relative.as_posix() != path or relative.suffix != ".md"
+            or any(part.startswith(".") or part.endswith((".", " "))
+                   or not re.fullmatch(r"[\w .-]+", part)
+                   or re.search(r"credential|secret|password|private-key", part, re.I)
+                   for part in relative.parts)):
+        raise ManifestError("document path must be a safe project-relative Markdown path")
+    validate_publish_text(path, "document path")
+
+
 def _validate_documents(value: Any, label: str) -> list[dict[str, Any]]:
     documents = _require_list(value, label)
     if len(documents) > MAX_ATTACHED_DOCUMENTS:
@@ -320,9 +333,8 @@ def _validate_documents(value: Any, label: str) -> list[dict[str, Any]]:
         item = _require_mapping(raw, item_label)
         _check_keys(item, {"path", "text", "redacted_lines"}, item_label)
         path = _require_string(item.get("path"), f"{item_label}.path")
-        relative = PurePosixPath(path)
-        if (relative.is_absolute() or ".." in relative.parts or "\\" in path or ":" in path
-                or relative.as_posix() != path or relative.name not in DOCUMENT_NAMES or path in seen):
+        validate_document_path(path)
+        if path in seen:
             raise ManifestError(f"{item_label}.path must be a unique relative metadata path")
         seen.add(path)
         text = item.get("text")
@@ -567,6 +579,21 @@ def _validate_architecture_index(value: Any, label: str, *, project_id: str) -> 
         }
         if normalized_module["evidence"] != f"{project_id}:file:{module_id}":
             raise ManifestError(f"{module_label}.evidence must bind the project-relative module identifier")
+        if "unresolved_imports" in module:
+            unresolved = []
+            for raw_import in _require_list(module["unresolved_imports"], f"{module_label}.unresolved_imports"):
+                item = _require_mapping(raw_import, "unresolved import")
+                _check_keys(item, {"name", "reason", "candidates"}, "unresolved import")
+                name = _require_string(item.get("name"), "unresolved import name")
+                if not all(part.isidentifier() for part in name.split(".")):
+                    raise ManifestError("unresolved import name must be a dotted Python identifier")
+                if item.get("reason") not in {"ambiguous-local-module", "local-import-root-not-declared"}:
+                    raise ManifestError("unresolved import reason is unsupported")
+                candidates = sorted(set(_validate_string_list(item.get("candidates"), "unresolved import candidates")))
+                if not candidates:
+                    raise ManifestError("unresolved import requires candidate module identities")
+                unresolved.append({"name": name, "reason": item["reason"], "candidates": candidates})
+            normalized_module["unresolved_imports"] = sorted(unresolved, key=lambda item: json.dumps(item, sort_keys=True))
         if mode == "modules-symbols":
             if "symbols" not in module or "internal_calls" not in module:
                 raise ManifestError(f"{module_label} requires symbols and internal_calls in modules-symbols mode")
@@ -581,6 +608,9 @@ def _validate_architecture_index(value: Any, label: str, *, project_id: str) -> 
         modules.append(normalized_module)
     modules.sort(key=lambda item: item["id"])
     for index, module in enumerate(modules):
+        for item in module.get("unresolved_imports", []):
+            if set(item["candidates"]) - module_ids:
+                raise ManifestError("unresolved import candidates reference unknown modules")
         unknown_imports = sorted(set(module["internal_imports"]) - module_ids)
         if unknown_imports:
             raise ManifestError(
@@ -600,6 +630,25 @@ def _validate_architecture_index(value: Any, label: str, *, project_id: str) -> 
         raise ManifestError(f"{label}.parse_failures must be an integer")
     if normalized["parse_failures"] < 0:
         raise ManifestError(f"{label}.parse_failures must not be negative")
+    if "parse_errors" in architecture:
+        errors = []
+        seen_errors: set[str] = set()
+        for raw_error in _require_list(architecture["parse_errors"], f"{label}.parse_errors"):
+            error = _require_mapping(raw_error, "parse error")
+            _check_keys(error, {"id", "reason"}, "parse error")
+            identifier = _require_string(error.get("id"), "parse error id")
+            relative = PurePosixPath(identifier)
+            if (relative.is_absolute() or ".." in relative.parts or ":" in identifier or "\\" in identifier
+                    or relative.as_posix() != identifier or not relative.suffix
+                    or identifier in seen_errors or identifier in module_ids):
+                raise ManifestError("parse error id must be a unique project-relative failed file")
+            if error.get("reason") not in {"syntax-error", "encoding-error", "read-error"}:
+                raise ManifestError("parse error reason is unsupported")
+            seen_errors.add(identifier)
+            errors.append({"id": identifier, "reason": error["reason"]})
+        if len(errors) != normalized["parse_failures"]:
+            raise ManifestError("parse error identities must match the failure count")
+        normalized["parse_errors"] = sorted(errors, key=lambda item: item["id"])
     supplied_hash = _require_string(architecture.get("map_sha256"), f"{label}.map_sha256")
     if not re.fullmatch(r"[0-9a-f]{64}", supplied_hash):
         raise ManifestError(f"{label}.map_sha256 must be a lowercase SHA-256 digest")
@@ -976,6 +1025,8 @@ def _architecture_section(project: dict[str, Any]) -> list[str]:
         f"截断：{'是' if architecture['truncated'] else '否'} · 解析失败：{architecture['parse_failures']}",
         "",
     ]
+    for error in architecture.get("parse_errors", []):
+        lines.append(f"- 未解析文件：`{error['id']}` · `{error['reason']}`")
     if not architecture["modules"]:
         lines.extend(["- 没有可发布的已解析模块。", ""])
         return lines
@@ -991,6 +1042,9 @@ def _architecture_section(project: dict[str, Any]) -> list[str]:
         lines.append(
             f"- 外部 packages：{', '.join(f'`{item}`' for item in module['external_packages']) if module['external_packages'] else '无'}"
         )
+        for item in module.get("unresolved_imports", []):
+            lines.append(f"- 未确定 import：`{item['name']}` · `{item['reason']}` · 候选："
+                         + ", ".join(f"`{candidate}`" for candidate in item["candidates"]))
         if architecture["mode"] == "modules-symbols":
             lines.append(
                 f"- 内部 calls：{', '.join(f'`{item}`' for item in module['internal_calls']) if module['internal_calls'] else '无'}"
@@ -1106,7 +1160,11 @@ def _current_action_projects(manifest: dict[str, Any], *, as_of: str | None = No
 def render_index_markdown(manifest: dict[str, Any], *, as_of: str | None = None) -> str:
     """Render a compact entry, or a self-contained briefing when documents are attached."""
     workspace = manifest["workspace"]
-    self_contained = any(project.get("attached_documents") for project in manifest["projects"])
+    self_contained = any(
+        project.get("attached_documents") or any(
+            signal.startswith("Repository-shared dependency") for signal in project.get("signals", [])
+        ) for project in manifest["projects"]
+    )
     lines = [
         f"# {workspace['name']}项目上下文入口",
         "",

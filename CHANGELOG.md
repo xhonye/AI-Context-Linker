@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Accept UTF-8 BOM source files in architecture scans. Report failed file identities and sanitized error categories in review artifacts and briefings (#3).
+- Add explicit project-relative `python_import_roots` for flat Python layouts; report ambiguous and undeclared sibling imports as unresolved rather than external packages (#2).
+- Allow custom Markdown attachments selected in both `allow_files` and `attach_files`, retaining redaction, path/link checks, size limits and untrusted-evidence labeling. Automatically discover bounded ancestor dependency manifests inside the same Git repository, exposing shared package declarations without claiming child ownership; no additional root setting is required (#4).
+
 ## 0.2.6 — 2026-09-17
 
 First-run onboarding and documentation release.

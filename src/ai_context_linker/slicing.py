@@ -381,6 +381,8 @@ def _architecture_slice_lines(project: dict[str, Any], question: str) -> list[st
         f"- 截断：{'是' if architecture['truncated'] else '否'}",
         f"- 解析失败：{architecture['parse_failures']}",
     ]
+    for error in architecture.get("parse_errors", []):
+        lines.append(f"- 未解析文件：`{error['id']}` · `{error['reason']}`")
     modules = architecture["modules"]
     incoming_symbols: dict[str, set[str]] = {}
     for source_module in modules:
@@ -440,6 +442,12 @@ def _architecture_slice_lines(project: dict[str, Any], question: str) -> list[st
             detail.append(f"imports={','.join(f'`{item}`' for item in module['internal_imports'][:4])}")
             if len(module["internal_imports"]) > 4:
                 omitted_fields.append(f"imports={len(module['internal_imports']) - 4}")
+        if module.get("unresolved_imports"):
+            detail.append("unresolved imports=" + ",".join(
+                f"`{item['name']}` ({item['reason']})" for item in module["unresolved_imports"][:4]
+            ))
+            if len(module["unresolved_imports"]) > 4:
+                omitted_fields.append(f"unresolved imports={len(module['unresolved_imports']) - 4}")
         if architecture["mode"] == "modules-symbols" and module["internal_calls"]:
             selected_calls = sorted(
                 module["internal_calls"],

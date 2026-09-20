@@ -2,6 +2,11 @@
 
 [返回首页](../README.md)
 
+平铺 Python 脚本可用 `python_import_roots: ["scripts"]` 明确导入目录；未确定的本地导入会单独标记。
+架构索引支持 UTF-8 BOM，并列出解析失败文件的相对路径和错误类别。
+`SKILL.md`、`docs/glossary.md` 等自定义 Markdown 须同时列入 `allow_files` 和 `attach_files`，作为未受信任的资料保留。
+monorepo 子项目默认自动发现同一 Git 仓库内的上层依赖文件，无需另设仓库项目。简报标明共享声明及来源，不把它们当作子项目的直接依赖；可用 `discover_shared_dependencies: false` 关闭。完整规则见[分目录项目说明](scoped-projects.md)。
+
 ## 如何工作
 
 ```text

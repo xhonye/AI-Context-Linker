@@ -129,6 +129,7 @@ class _ParsedModule:
     external_packages: set[str] = field(default_factory=set)
     import_bindings: dict[str, tuple[str, str | None]] = field(default_factory=dict)
     internal_calls: set[str] = field(default_factory=set)
+    unresolved_imports: list[dict[str, Any]] = field(default_factory=list)
 
 
 class _PythonVisitor(ast.NodeVisitor):
@@ -212,7 +213,7 @@ def _is_test_module(module_id: str) -> bool:
     )
 
 
-def _module_aliases(module_id: str) -> set[str]:
+def _module_aliases(module_id: str, import_roots: tuple[str, ...] = ()) -> set[str]:
     path = PurePosixPath(module_id)
     without_suffix = path.with_suffix("")
     parts = list(without_suffix.parts)
@@ -221,6 +222,10 @@ def _module_aliases(module_id: str) -> set[str]:
     aliases = {".".join(parts)} if parts else set()
     if len(parts) > 1 and parts[0] in {"src", "lib", "app"}:
         aliases.add(".".join(parts[1:]))
+    for root in import_roots:
+        prefix = list(PurePosixPath(root).parts)
+        if parts[:len(prefix)] == prefix and len(parts) > len(prefix):
+            aliases.add(".".join(parts[len(prefix):]))
     return {alias for alias in aliases if alias}
 
 
@@ -433,28 +438,36 @@ def _enumerate_source_files(root: Path) -> tuple[list[Path], int, bool]:
     return files, skipped_directories, truncated
 
 
-def _resolve_structure(modules: list[_ParsedModule]) -> None:
+def _resolve_structure(modules: list[_ParsedModule], import_roots: tuple[str, ...] = ()) -> None:
     module_ids = {module.module_id for module in modules}
-    python_aliases = {
-        alias: module.module_id
-        for module in modules
-        if module.language == "python"
-        for alias in _module_aliases(module.module_id)
-    }
+    python_aliases: dict[str, set[str]] = {}
+    for module in modules:
+        if module.language == "python":
+            for alias in _module_aliases(module.module_id, import_roots):
+                python_aliases.setdefault(alias, set()).add(module.module_id)
     symbols_by_module = {module.module_id: module.symbols for module in modules}
     for module in modules:
         for raw_name, level, bindings in module.raw_imports:
             if module.language == "python":
                 resolved_name = _python_import_name(module, raw_name, level)
-                base_target = python_aliases.get(resolved_name)
+                base_targets = python_aliases.get(resolved_name, set())
                 found_internal = False
+                unresolved = False
                 for imported_name, bound_name in bindings:
                     submodule_name = (
                         f"{resolved_name}.{imported_name}" if resolved_name and imported_name != "*" else ""
                     )
-                    target = python_aliases.get(submodule_name) or base_target
-                    if target is None:
+                    targets = python_aliases.get(submodule_name) or base_targets
+                    if len(targets) > 1:
+                        module.unresolved_imports.append({
+                            "name": resolved_name or submodule_name, "reason": "ambiguous-local-module",
+                            "candidates": sorted(targets),
+                        })
+                        unresolved = True
                         continue
+                    if not targets:
+                        continue
+                    target = next(iter(targets))
                     found_internal = True
                     module.internal_imports.add(target)
                     module.import_bindings[bound_name] = (
@@ -463,9 +476,20 @@ def _resolve_structure(modules: list[_ParsedModule]) -> None:
                         if python_aliases.get(submodule_name) or imported_name in {"*", "default"}
                         else imported_name,
                     )
-                if not found_internal and level == 0:
+                if not found_internal and not unresolved and level == 0:
                     package = _external_package(raw_name)
-                    if package and package not in getattr(sys, "stdlib_module_names", set()):
+                    # A sibling can be importable when its directory is on sys.path,
+                    # but its presence alone does not establish that runtime policy.
+                    sibling = PurePosixPath(module.module_id).parent / raw_name.replace(".", "/")
+                    candidates = sorted({
+                        sibling.as_posix() + ".py", (sibling / "__init__.py").as_posix(),
+                    } & module_ids)
+                    if candidates:
+                        module.unresolved_imports.append({
+                            "name": raw_name, "reason": "local-import-root-not-declared",
+                            "candidates": candidates,
+                        })
+                    elif package and package not in getattr(sys, "stdlib_module_names", set()):
                         module.external_packages.add(package)
                 continue
             target = _resolve_js_import(module.module_id, raw_name, module_ids)
@@ -511,14 +535,33 @@ def collect_architecture_index(
     *,
     project_id: str,
     mode: str,
+    python_import_roots: list[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Collect a bounded structural index for one explicitly opted-in project."""
     if mode not in ARCHITECTURE_MODES - {"disabled"}:
         raise ManifestError("architecture visibility must be modules-only or modules-symbols")
     resolved_root = root.resolve()
+    import_roots = [] if python_import_roots is None else python_import_roots
+    if not isinstance(import_roots, list) or len(import_roots) > 16:
+        raise ManifestError("python_import_roots must contain at most 16 relative directories")
+    for value in import_roots:
+        if not isinstance(value, str) or not value:
+            raise ManifestError("python_import_roots must contain relative directories")
+        relative = PurePosixPath(value)
+        if (relative.is_absolute() or ".." in relative.parts or ":" in value or "\\" in value
+                or relative.as_posix() != value):
+            raise ManifestError("python_import_roots must contain normalized project-relative directories")
+        target = resolved_root / value
+        if any(is_link_or_reparse(resolved_root / parent) for parent in (relative, *relative.parents)):
+            raise ManifestError("python_import_roots must not traverse links")
+        if not target.is_dir() or not target.resolve().is_relative_to(resolved_root):
+            raise ManifestError("python_import_roots must name existing directories inside the project")
+    if len(import_roots) != len(set(import_roots)):
+        raise ManifestError("python_import_roots must contain unique directories")
     files, skipped_directories, truncated = _enumerate_source_files(resolved_root)
     parsed: list[_ParsedModule] = []
     parse_failures = 0
+    parse_errors: list[dict[str, str]] = []
     oversized_files = 0
     total_bytes = 0
     source_bodies_read = 0
@@ -532,18 +575,22 @@ def collect_architecture_index(
         module_id = path.relative_to(resolved_root).as_posix()
         try:
             source_bodies_read += 1
-            text = path.read_text(encoding="utf-8")
+            text = path.read_text(encoding="utf-8-sig")
             language = SOURCE_LANGUAGES[path.suffix.casefold()]
             module = (
                 _parse_python(module_id, text)
                 if language == "python"
                 else _parse_javascript(module_id, text, language)
             )
-        except (OSError, UnicodeError, SyntaxError):
+        except (OSError, UnicodeError, SyntaxError) as exc:
             parse_failures += 1
+            category = "syntax-error" if isinstance(exc, SyntaxError) else (
+                "encoding-error" if isinstance(exc, UnicodeError) else "read-error"
+            )
+            parse_errors.append({"id": module_id, "reason": category})
             continue
         parsed.append(module)
-    _resolve_structure(parsed)
+    _resolve_structure(parsed, tuple(import_roots))
 
     modules: list[dict[str, Any]] = []
     for module in sorted(parsed, key=lambda item: item.module_id):
@@ -558,6 +605,9 @@ def collect_architecture_index(
         if mode == "modules-symbols":
             record["symbols"] = sorted(module.symbols)
             record["internal_calls"] = sorted(module.internal_calls)
+        if module.unresolved_imports:
+            unique = {json.dumps(item, sort_keys=True): item for item in module.unresolved_imports}
+            record["unresolved_imports"] = [unique[key] for key in sorted(unique)]
         modules.append(record)
     payload = {
         "mode": mode,
@@ -565,6 +615,8 @@ def collect_architecture_index(
         "parse_failures": parse_failures,
         "modules": modules,
     }
+    if parse_errors:
+        payload["parse_errors"] = sorted(parse_errors, key=lambda item: item["id"])
     digest = hashlib.sha256(
         json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -580,5 +632,6 @@ def collect_architecture_index(
         "oversized_files": oversized_files,
         "files_skipped_by_directory": skipped_directories,
         "truncated": truncated,
+        "parse_errors": sorted(parse_errors, key=lambda item: item["id"]),
     }
     return index, report

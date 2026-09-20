@@ -50,6 +50,9 @@ briefing. In an allowed project's private workspace configuration:
 review the candidate as usual, then build it. With attachments enabled,
 **`ai_context.md` contains all project cards and the selected document bodies**;
 sharing this single file delivers those materials. Project shards remain available.
+Custom Markdown such as `SKILL.md` and `docs/glossary.md` can be explicitly selected
+in both lists. See [scoped projects](scoped-projects.md) for attachment safeguards,
+flat Python import roots, parse diagnostics, and automatic monorepo shared-dependency discovery (no extra root setting; opt out with `discover_shared_dependencies: false`).
 Question slices omit attachments by default. To make one discussion self-contained, select the needed documents already captured in the reviewed manifest:
 
 ```powershell
