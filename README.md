@@ -103,11 +103,20 @@ ai-context-linker demo --output-dir ./linker-demo
 
 </details>
 
+## 交流与反馈
+
+装不上、用不顺，或者想加什么功能？欢迎直接反馈，也欢迎分享你是怎么用 Linker 的。
+
+- **QQ 交流群：** `1080546295`
+- **GitHub Issues：** [使用求助、Bug 和功能建议](https://github.com/xhonye/AI-Context-Linker/issues)
+
+可以直接在群里聊，需要持续跟进的问题，我会整理到 GitHub Issues。
+
 ## 更多资料
 
 [详细命令与配置](docs/reference-zh-CN.md) · [安全边界](docs/security-boundary.md) · [架构](docs/architecture.md) · [贡献指南](CONTRIBUTING.md) · [MIT 许可](LICENSE)
 
-试用遇到问题？[告诉我们卡在哪一步](https://github.com/xhonye/AI-Context-Linker/issues/new?template=help-zh.yml)。如果它确实减少了你重复介绍项目的时间，欢迎点 Star。
+如果它确实减少了你重复介绍项目的时间，欢迎点 Star。
 
 ## Star History
 

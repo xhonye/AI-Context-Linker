@@ -105,11 +105,16 @@ These AI-redrawn cards summarize anonymized observations, not original chat evid
 
 </details>
 
+## Community & Feedback
+
+Need help getting started, ran into a bug, or have a feature idea?
+[Open an issue](https://github.com/xhonye/AI-Context-Linker/issues)—and feel free to tell me how you're using Linker.
+
 ## More
 
 [Commands and configuration](docs/reference.md) · [Security boundary](docs/security-boundary.md) · [Architecture](docs/architecture.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
 
-Stuck? [Tell us which step failed](https://github.com/xhonye/AI-Context-Linker/issues/new/choose). If it saves you repeated project introductions, a Star helps others find it.
+If it saves you repeated project introductions, a Star helps others find it.
 
 ## Star History
 
