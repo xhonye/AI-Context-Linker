@@ -213,6 +213,43 @@ def test_unsafe_strings_fail_closed(unsafe_text: str, message: str) -> None:
         validate_manifest(manifest)
 
 
+@pytest.mark.parametrize("text", [
+    '{"api_key": "SYNTHETIC_CREDENTIAL"}',
+    '{"password": "SYNTHETIC_CREDENTIAL"}',
+    "'token': 'SYNTHETIC_CREDENTIAL'",
+    '"API-KEY" = "SYNTHETIC_CREDENTIAL"',
+    '{"secret":\n"SYNTHETIC_CREDENTIAL"}',
+])
+def test_quoted_credential_fields_fail_closed(text):
+    manifest = valid_manifest()
+    manifest["workspace"]["summary"] = text
+    with pytest.raises(ManifestError, match="likely secret"):
+        validate_manifest(manifest)
+
+
+@pytest.mark.parametrize("path", [
+    "/srv/synthetic/customer-notes", "/tmp/synthetic/export",
+    "/root/synthetic", "/Volumes/synthetic", "/custom-mount/synthetic",
+    "/workspace", "/用户/示例",
+])
+def test_unix_paths_outside_the_original_root_list_fail_closed(path):
+    manifest = valid_manifest()
+    manifest["workspace"]["summary"] = f"Read '{path}' for details."
+    with pytest.raises(ManifestError, match="absolute path"):
+        validate_manifest(manifest)
+
+
+@pytest.mark.parametrize("text", [
+    "docs/design.md", "./docs/design.md", "../docs/design.md",
+    "src\\app.py", "@scope/package", "2026/10/03",
+    '<a id="project-alpha"></a>', "&lt;script&gt;run()&lt;/script&gt;", "Build / test",
+])
+def test_relative_paths_and_prose_remain_publishable(text):
+    manifest = valid_manifest()
+    manifest["workspace"]["summary"] = text
+    assert validate_manifest(manifest)["workspace"]["summary"] == text
+
+
 def test_relationship_must_reference_known_projects() -> None:
     manifest = copy.deepcopy(valid_manifest())
     manifest["relationships"][0]["target"] = "missing"

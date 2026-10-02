@@ -9,6 +9,7 @@ from .core import (
     ManifestError, UNTRUSTED_DATA_NOTICE, _atomic_write_text, _resolved_project_state,
     _configuration_notice, _constraint_label, _document_section,
     MAX_ATTACHED_DOCUMENTS, MAX_PROJECT_DOCUMENT_BYTES,
+    QUESTION_CONTEXT_FILENAME, QUESTION_CONTEXT_NOTICE,
     load_manifest, validate_output_directory, validate_publish_text,
 )
 from .state_records import context_time
@@ -631,7 +632,7 @@ def render_question_context(
     lines = [
         f"# {workspace['name']}问题定向简报",
         "",
-        "> 本文件由输入 manifest 确定性裁剪；生成器不自动证明该 manifest 已获人工批准。",
+        QUESTION_CONTEXT_NOTICE,
         UNTRUSTED_DATA_NOTICE,
         (
             "> 本次裁剪不读取源码、不调用模型；附文可能含人工或开发代理整理的说明，须按其证据等级解读。"
@@ -864,6 +865,6 @@ def build_question_context(
 ) -> QuestionContextPaths:
     manifest = load_manifest(manifest_path)
     markdown = render_question_context(manifest, question, as_of=as_of, include_documents=include_documents)
-    destination = validate_output_directory(output_dir) / "ai_context_linker.question.md"
+    destination = validate_output_directory(output_dir) / QUESTION_CONTEXT_FILENAME
     _atomic_write_text(destination, markdown)
     return QuestionContextPaths(markdown=destination)

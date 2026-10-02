@@ -13,7 +13,7 @@ from ai_context_linker.core import (
     prepare_document, validate_manifest,
 )
 from ai_context_linker.discovery import discover_projects
-from ai_context_linker.scanner import collect_candidate
+from ai_context_linker.scanner import collect_candidate, scan_workspace
 from ai_context_linker.slicing import render_question_context, build_question_context
 
 
@@ -180,6 +180,60 @@ def test_multiline_fences_cannot_escape_data_wrapper(attachment_case, tmp_path: 
 def test_unterminated_private_key_redacts_remainder():
     document = prepare_document("README.md", "-----BEGIN PRIVATE KEY-----\nbody\nremaining")
     assert document["text"] == "\n".join([REDACTED_DOCUMENT_LINE] * 3)
+
+
+@pytest.mark.parametrize("unsafe", [
+    '{"api_key": "SYNTHETIC_CREDENTIAL"}',
+    "'password': 'SYNTHETIC_CREDENTIAL'",
+    "Backup: /srv/synthetic-private/customer-notes",
+    "Scratch: /tmp/synthetic-private/export",
+    "Mount: /custom-mount/synthetic-private/export",
+])
+def test_sensitive_document_lines_are_redacted_in_all_outputs(attachment_case, tmp_path, unsafe):
+    root, config = attachment_case
+    (root / "README.md").write_text("# Example\n\nSafe description.\n\n" + unsafe + "\n", encoding="utf-8")
+    candidate, _ = collect_candidate(config)
+    document = next(d for d in candidate["projects"][0]["attached_documents"] if d["path"] == "README.md")
+    assert document["redacted_lines"] == [5]
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps(candidate), encoding="utf-8")
+    bundle = build_bundle(manifest, tmp_path / "publish")
+    question = build_question_context(manifest, "sample", tmp_path / "publish",
+                                     include_documents=["sample:README.md"])
+    for path in [manifest, bundle.markdown, bundle.graph, *bundle.project_cards, question.markdown]:
+        text = path.read_text(encoding="utf-8")
+        assert "SYNTHETIC_CREDENTIAL" not in text
+        assert "synthetic-private" not in text
+    assert "5: " + REDACTED_DOCUMENT_LINE in question.markdown.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("visibility", ["deny", "summary-only"])
+def test_scope_reduction_invalidates_previous_question_slice(attachment_case, tmp_path, visibility):
+    _, config = attachment_case
+    raw = json.loads(config.read_text(encoding="utf-8"))
+    other_root = tmp_path / "other-project"
+    other_root.mkdir()
+    raw["projects"].append({
+        "id": "other", "path": str(other_root), "sensitivity": "public",
+        "cloud_visibility": "allow", "redaction_profile": "standard",
+        "summary": "An unrelated synthetic project.", "allow_files": [],
+    })
+    config.write_text(json.dumps(raw), encoding="utf-8")
+    initial = scan_workspace(config, tmp_path / "review-before")
+    publish = tmp_path / "publish"
+    build_bundle(initial.candidate_manifest, publish)
+    question = build_question_context(initial.candidate_manifest, "sample", publish,
+                                     include_documents=["sample:README.md"])
+    assert "Offline export was chosen" in question.markdown.read_text(encoding="utf-8")
+    raw = json.loads(config.read_text(encoding="utf-8"))
+    raw["projects"][0].update(cloud_visibility=visibility, attach_files=[],
+                              approved_summary="Reviewed neutral summary.")
+    config.write_text(json.dumps(raw), encoding="utf-8")
+    current = scan_workspace(config, tmp_path / "review-after", previous_manifest=initial.candidate_manifest)
+    build_bundle(current.candidate_manifest, publish)
+    assert not question.markdown.exists()
+    assert all("Offline export was chosen" not in p.read_text(encoding="utf-8")
+               for p in publish.rglob("*") if p.is_file())
 
 
 def test_selected_slice_is_self_contained_without_source_reads(attachment_case, tmp_path):

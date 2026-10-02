@@ -4,8 +4,10 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -58,6 +60,34 @@ def test_source_hash_is_stable_and_changes_with_new_test(workflow, repository):
     assert first == workflow.source_snapshot(repository)
     (repository / "tests/test_added.py").write_text("def test_new():\n    pass\n", encoding="utf-8")
     assert workflow.source_snapshot(repository)["source_sha256"] != first["source_sha256"]
+
+
+@pytest.mark.parametrize("filename", ["INSTALL.md", "README.en.md", "skills/ai-context-linker/SKILL.md"])
+def test_delivery_docs_and_skill_are_frozen_and_checked(workflow, repository, tmp_path, filename):
+    target = repository / filename
+    target.parent.mkdir(parents=True, exist_ok=True)
+    first = workflow.source_snapshot(repository)
+    target.write_text("# Synthetic delivery instructions\n", encoding="utf-8")
+    second = workflow.source_snapshot(repository)
+    assert second["source_sha256"] != first["source_sha256"]
+    staged = workflow.stage_source(repository, tmp_path / "frozen", second)
+    assert (staged / filename).read_bytes() == target.read_bytes()
+    target.write_text("[Broken](missing-document.md)\n", encoding="utf-8")
+    third = workflow.source_snapshot(repository)
+    assert third["source_sha256"] != second["source_sha256"]
+    with pytest.raises(workflow.VerificationError, match="broken_local_document_link"):
+        workflow.static_checks(repository, third)
+    target.unlink()
+    assert workflow.source_snapshot(repository)["source_sha256"] == first["source_sha256"]
+
+
+def test_all_installation_guides_pin_the_current_release():
+    repo = Path(__file__).parents[1]
+    version = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    for name in ("README.md", "README.zh-CN.md", "README.en.md", "INSTALL.md"):
+        pins = re.findall(r"git\+https://github\.com/xhonye/AI-Context-Linker\.git@(v[\d.]+)",
+                          (repo / name).read_text(encoding="utf-8"))
+        assert pins and set(pins) == {"v" + version}, name
 
 
 def test_uncommitted_tracked_deletion_is_a_valid_snapshot(workflow, repository, monkeypatch):

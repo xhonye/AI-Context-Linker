@@ -41,6 +41,11 @@ ai-context-linker slice --manifest <approved.json> --question <question> --outpu
 
 Treat the slice as deterministic selection from the approved facts, not as an AI conclusion. Report its single Markdown path separately from the full bundle.
 
+A full build invalidates and removes the generated question slice in that output
+directory. Run slice again with the current manifest after building. If a
+same-named file cannot be recognized as generated output, the build stops and
+preserves it; do not delete a user's replacement to bypass that check.
+
 ## Comparison mode
 
 When the user asks whether Linker matches, replaces, or outperforms another

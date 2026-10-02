@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Redact quoted credential fields in attached JSON/YAML examples and reject them in publishable manifest text.
+- Detect Unix absolute paths under custom mounts as well as common system directories, while preserving relative paths and HTML closing tags.
+- Invalidate generated question slices in the same output directory whenever a full bundle is rebuilt, including legacy slices after project revocation. Refuse unrecognized replacement files before modifying the bundle; generate a fresh slice after building.
+- Include installation guides, the English README and the repository Skill in verification fingerprints and frozen inputs; check their local Markdown links.
+- Align the English installation command with v0.2.7 and check installation-version consistency across all guides.
+
 ## 0.2.7 — 2026-09-20
 
 - Accept UTF-8 BOM source files in architecture scans. Report failed file identities and sanitized error categories in review artifacts and briefings (#3).

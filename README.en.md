@@ -40,7 +40,7 @@ The [agent installation guide](INSTALL.md) covers prerequisites, installation, v
 **Prefer commands?** With [uv](https://docs.astral.sh/uv/getting-started/installation/) and Git available, uv can provision an isolated Python 3.11 environment:
 
 ```sh
-uv tool install --python 3.11 git+https://github.com/xhonye/AI-Context-Linker.git@v0.2.6
+uv tool install --python 3.11 git+https://github.com/xhonye/AI-Context-Linker.git@v0.2.7
 ai-context-linker demo --output-dir ./linker-demo
 ```
 

@@ -47,7 +47,8 @@ python -I -B scripts/verify.py --profile candidate `
 ```
 
 The fingerprint binds nonignored source, tests, fixtures, schemas, scripts,
-documentation and execution configuration, including uncommitted changes. It is
+documentation (including every installation guide and the repository Skill)
+and execution configuration, including uncommitted changes. It is
 an acknowledgement of the reviewed revision, **not proof of who reviewed it**.
 CI computes it automatically and does not claim human review. A subsequent
 source or packaging-metadata change invalidates the old candidate evidence;

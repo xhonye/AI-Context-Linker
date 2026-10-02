@@ -22,9 +22,10 @@ from pathlib import Path
 from urllib.parse import unquote
 
 
-INPUT_DIRS = {"src", "tests", "scripts", "schema", "examples", "docs", ".github"}
+INPUT_DIRS = {"src", "tests", "scripts", "schema", "examples", "docs", "skills", ".github"}
 INPUT_FILES = {
-    "pyproject.toml", "README.md", "README.zh-CN.md", "AGENTS.md", "PROJECT_CHARTER.md", "CHANGELOG.md",
+    "pyproject.toml", "README.md", "README.zh-CN.md", "README.en.md", "INSTALL.md",
+    "AGENTS.md", "PROJECT_CHARTER.md", "CHANGELOG.md",
     "SECURITY.md", "CONTRIBUTING.md", "LICENSE", ".gitignore", ".gitattributes", "MANIFEST.in",
 }
 SYNC_MARKERS = ("google drive", "googledrive", "onedrive", "dropbox", "icloud", "drivefs")
@@ -233,7 +234,7 @@ def static_checks(repo: Path, snapshot: dict) -> dict:
             ast.parse(path.read_text(encoding="utf-8"), filename=relative)
         elif relative.startswith("schema/") and path.suffix == ".json":
             json.loads(path.read_text(encoding="utf-8"))
-        if path.suffix != ".md" or not (relative.startswith("docs/") or "/" not in relative):
+        if path.suffix != ".md" or not (relative.startswith(("docs/", "skills/")) or "/" not in relative):
             continue
         prose = re.sub(r"```.*?```", "", path.read_text(encoding="utf-8"), flags=re.DOTALL)
         for match in re.finditer(r"\[[^\]\n]*\]\(([^\s)]+)(?:\s+\"[^\"]*\")?\)", prose):
